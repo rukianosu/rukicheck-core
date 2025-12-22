@@ -15,6 +15,7 @@ public class MainViewModel : ViewModelBase
     private readonly InspectionOrchestrator _orchestrator;
     private readonly StorageInspectionService _storageService;
     private readonly CpuInspectionService _cpuService;
+    private readonly HardwareInfoService _hardwareService;
 
     private string _managementId = string.Empty;
     private string _inspectionDate;
@@ -27,11 +28,13 @@ public class MainViewModel : ViewModelBase
     public MainViewModel(
         InspectionOrchestrator orchestrator,
         StorageInspectionService storageService,
-        CpuInspectionService cpuService)
+        CpuInspectionService cpuService,
+        HardwareInfoService hardwareService)
     {
         _orchestrator = orchestrator;
         _storageService = storageService;
         _cpuService = cpuService;
+        _hardwareService = hardwareService;
 
         // 日付を今日で固定
         _inspectionDate = DateTime.Now.ToString("yyyy年MM月dd日");
@@ -122,7 +125,7 @@ public class MainViewModel : ViewModelBase
                !IsInspectionStarted;
     }
 
-    private void StartInspection()
+    private async void StartInspection()
     {
         try
         {
@@ -138,9 +141,22 @@ public class MainViewModel : ViewModelBase
             _session = _orchestrator.CreateSession(ManagementId, SavePath);
 
             IsInspectionStarted = true;
-            StatusMessage = $"検品開始: {_session.OutputPath}";
+            StatusMessage = "ハードウェア情報を収集しています...";
 
-            MessageBox.Show($"検品フォルダを作成しました:\n{_session.OutputPath}",
+            // ハードウェア情報を自動収集
+            try
+            {
+                var hardwareInfo = await _hardwareService.ExecuteAsync(_session.AttachmentsPath);
+                _session.Report.Hardware = hardwareInfo;
+
+                StatusMessage = $"検品開始: {_session.OutputPath} (ハードウェア情報: CPU={hardwareInfo.Cpu.Name}, メモリ={hardwareInfo.Memory.TotalGb}GB {hardwareInfo.Memory.Type})";
+            }
+            catch (Exception hwEx)
+            {
+                StatusMessage = $"検品開始: {_session.OutputPath} (ハードウェア情報収集失敗: {hwEx.Message})";
+            }
+
+            MessageBox.Show($"検品フォルダを作成しました:\n{_session.OutputPath}\n\nハードウェア情報を自動収集しました。",
                 "検品開始", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

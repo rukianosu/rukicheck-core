@@ -28,6 +28,7 @@ public partial class App : Application
         services.AddSingleton<InspectionOrchestrator>();
 
         // Services（各検査サービス）
+        services.AddTransient<HardwareInfoService>();
         services.AddTransient<StorageInspectionService>();
         services.AddTransient<KeyboardInspectionService>();
         services.AddTransient<MicrophoneInspectionService>();

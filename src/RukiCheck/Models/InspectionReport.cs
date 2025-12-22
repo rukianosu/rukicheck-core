@@ -10,6 +10,9 @@ public class InspectionReport
     [JsonPropertyName("meta")]
     public InspectionMeta Meta { get; set; } = new();
 
+    [JsonPropertyName("hardware")]
+    public HardwareInfoResult? Hardware { get; set; }
+
     [JsonPropertyName("storage")]
     public StorageResult? Storage { get; set; }
 

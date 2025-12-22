@@ -45,6 +45,12 @@ public class HtmlReportGenerator
 
         sb.AppendLine("    <div class=\"container\">");
 
+        // ハードウェア情報
+        if (report.Hardware != null)
+        {
+            sb.AppendLine(BuildHardwareSection(report.Hardware));
+        }
+
         // ストレージ
         if (report.Storage != null)
         {
@@ -97,6 +103,85 @@ public class HtmlReportGenerator
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
 
+        return sb.ToString();
+    }
+
+    private string BuildHardwareSection(HardwareInfoResult hardware)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("        <div class=\"section\">");
+        sb.AppendLine("            <h2>🖥️ ハードウェア情報</h2>");
+
+        // CPU情報
+        sb.AppendLine("            <h3>💻 CPU</h3>");
+        sb.AppendLine("            <table>");
+        sb.AppendLine($"                <tr><th>モデル名</th><td>{hardware.Cpu.Name}</td></tr>");
+        sb.AppendLine($"                <tr><th>製造元</th><td>{hardware.Cpu.Manufacturer}</td></tr>");
+        sb.AppendLine($"                <tr><th>物理コア数</th><td>{hardware.Cpu.Cores} コア</td></tr>");
+        sb.AppendLine($"                <tr><th>論理プロセッサ数</th><td>{hardware.Cpu.LogicalProcessors} スレッド</td></tr>");
+        sb.AppendLine($"                <tr><th>最大クロック速度</th><td>{hardware.Cpu.MaxClockMhz / 1000.0:F2} GHz</td></tr>");
+        sb.AppendLine($"                <tr><th>アーキテクチャ</th><td>{hardware.Cpu.Architecture}</td></tr>");
+        sb.AppendLine("            </table>");
+
+        // メモリ情報
+        sb.AppendLine("            <h3>🧠 メモリ</h3>");
+        sb.AppendLine("            <table>");
+        sb.AppendLine($"                <tr><th>総容量</th><td>{hardware.Memory.TotalGb:F2} GB</td></tr>");
+        sb.AppendLine($"                <tr><th>メモリ種別</th><td>{hardware.Memory.Type}</td></tr>");
+        sb.AppendLine($"                <tr><th>速度</th><td>{hardware.Memory.SpeedMhz} MHz</td></tr>");
+        sb.AppendLine($"                <tr><th>スロット数</th><td>{hardware.Memory.Slots}</td></tr>");
+        sb.AppendLine("            </table>");
+
+        // メモリモジュール詳細
+        if (hardware.Memory.Modules.Count > 0)
+        {
+            sb.AppendLine("            <h4>メモリモジュール詳細</h4>");
+            sb.AppendLine("            <table>");
+            sb.AppendLine("                <tr><th>スロット</th><th>容量</th><th>メーカー</th><th>速度</th><th>パーツ番号</th></tr>");
+
+            for (int i = 0; i < hardware.Memory.Modules.Count; i++)
+            {
+                var module = hardware.Memory.Modules[i];
+                sb.AppendLine($"                <tr>");
+                sb.AppendLine($"                    <td>#{i + 1}</td>");
+                sb.AppendLine($"                    <td>{module.CapacityGb:F2} GB</td>");
+                sb.AppendLine($"                    <td>{module.Manufacturer}</td>");
+                sb.AppendLine($"                    <td>{module.SpeedMhz} MHz</td>");
+                sb.AppendLine($"                    <td>{module.PartNumber}</td>");
+                sb.AppendLine($"                </tr>");
+            }
+
+            sb.AppendLine("            </table>");
+        }
+
+        // GPU情報
+        if (hardware.Gpus.Count > 0)
+        {
+            sb.AppendLine("            <h3>🎮 GPU（グラフィックカード）</h3>");
+
+            foreach (var gpu in hardware.Gpus)
+            {
+                sb.AppendLine("            <table>");
+                sb.AppendLine($"                <tr><th>モデル名</th><td>{gpu.Name}</td></tr>");
+
+                if (gpu.VramGb > 0)
+                {
+                    sb.AppendLine($"                <tr><th>VRAM容量</th><td>{gpu.VramGb:F2} GB</td></tr>");
+                }
+
+                sb.AppendLine($"                <tr><th>製造元</th><td>{gpu.AdapterManufacturer}</td></tr>");
+
+                if (!string.IsNullOrEmpty(gpu.VideoProcessor))
+                {
+                    sb.AppendLine($"                <tr><th>ビデオプロセッサ</th><td>{gpu.VideoProcessor}</td></tr>");
+                }
+
+                sb.AppendLine($"                <tr><th>ドライバーバージョン</th><td>{gpu.DriverVersion}</td></tr>");
+                sb.AppendLine("            </table>");
+            }
+        }
+
+        sb.AppendLine("        </div>");
         return sb.ToString();
     }
 
