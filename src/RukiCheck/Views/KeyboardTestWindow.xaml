@@ -1,0 +1,218 @@
+<Window x:Class="RukiCheck.Views.KeyboardTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="⌨️ キーボード検査" Height="750" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        KeyDown="Window_KeyDown"
+        Background="#F5F7FA">
+
+    <Window.Resources>
+        <!-- キーボタンのスタイル -->
+        <Style x:Key="KeyButtonStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#BDBDBD"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <!-- 押下済みキー -->
+                <DataTrigger Binding="{Binding IsPressed}" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#66BB6A" Offset="0"/>
+                                <GradientStop Color="#4CAF50" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="BorderBrush" Value="#388E3C"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- キーテキストのスタイル -->
+        <Style x:Key="KeyTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPressed}" Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- グラデーション背景 -->
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#F5F7FA" Offset="0"/>
+                <GradientStop Color="#E8EAF6" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ヘッダー -->
+        <Border Grid.Row="0" Background="#5C6BC0" Padding="20" Margin="20,20,20,10" CornerRadius="10">
+            <StackPanel>
+                <TextBlock Text="⌨️ キーボード検査" FontSize="28" FontWeight="Bold"
+                           Foreground="White" HorizontalAlignment="Center"/>
+                <TextBlock Text="すべてのキーを1回ずつ押してください" FontSize="14"
+                           Foreground="White" Opacity="0.9" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 進捗バー -->
+        <Border Grid.Row="1" Background="White" Padding="20" Margin="20,0" CornerRadius="10"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                    <TextBlock FontSize="18" FontWeight="Bold" Foreground="#5C6BC0">
+                        <Run Text="{Binding PressedCount, Mode=OneWay}"/>
+                        <Run Text="/"/>
+                        <Run Text="{Binding TotalKeys, Mode=OneWay}"/>
+                        <Run Text="キー"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Progress, StringFormat={}{0:F1}%}" FontSize="18" FontWeight="Bold"
+                               Foreground="#4CAF50" Margin="20,0,0,0"/>
+                </StackPanel>
+
+                <ProgressBar Grid.Row="1" Height="20" Value="{Binding Progress}" Maximum="100"
+                             Foreground="#4CAF50" Background="#E0E0E0" BorderBrush="#BDBDBD" BorderThickness="1"/>
+            </Grid>
+        </Border>
+
+        <!-- キーボード配列 -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="20,10">
+            <ItemsControl ItemsSource="{Binding KeyRows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ItemsControl ItemsSource="{Binding}" Margin="0,3">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource KeyButtonStyle}"
+                                            Width="{Binding Width, Converter={StaticResource WidthConverter}}"
+                                            Height="50"
+                                            ToolTip="{Binding KeyCode}">
+                                        <Border.Effect>
+                                            <DropShadowEffect ShadowDepth="2" BlurRadius="5" Opacity="0.3"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   Style="{StaticResource KeyTextStyle}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- ステータスメッセージ -->
+        <Border Grid.Row="3" Background="White" Padding="15" Margin="20,10" CornerRadius="10"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="16" FontWeight="Bold"
+                       Foreground="#5C6BC0" HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="20">
+            <Button Content="✅ 完了" Command="{Binding CompleteCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#4CAF50" Foreground="White" BorderThickness="0"
+                    Cursor="Hand" Margin="5">
+                <Button.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                </Button.Effect>
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#66BB6A"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="🔄 リセット" Command="{Binding ResetCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#9E9E9E" Foreground="White" BorderThickness="0"
+                    Cursor="Hand" Margin="5">
+                <Button.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                </Button.Effect>
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+
+        <!-- 凡例 -->
+        <Border Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Background="White" Padding="10" Margin="0,-100,30,0" CornerRadius="8"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="凡例" FontSize="12" FontWeight="Bold" Margin="0,0,0,5"/>
+                <StackPanel Orientation="Horizontal" Margin="0,3">
+                    <Border Width="20" Height="20" Background="#4CAF50" CornerRadius="3" Margin="0,0,5,0"/>
+                    <TextBlock Text="押下済み" FontSize="11"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,3">
+                    <Border Width="20" Height="20" Background="#E0E0E0" CornerRadius="3" Margin="0,0,5,0"/>
+                    <TextBlock Text="未押下" FontSize="11"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

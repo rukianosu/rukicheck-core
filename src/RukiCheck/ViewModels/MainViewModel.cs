@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using RukiCheck.Application;
 using RukiCheck.Models;
@@ -39,6 +40,7 @@ public class MainViewModel : ViewModelBase
         SelectSavePathCommand = new RelayCommand(_ => SelectSavePath());
         StartInspectionCommand = new RelayCommand(_ => StartInspection(), _ => CanStartInspection());
         RunStorageTestCommand = new AsyncRelayCommand(async _ => await RunStorageTestAsync());
+        RunKeyboardTestCommand = new RelayCommand(_ => RunKeyboardTest());
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
         OpenReportFolderCommand = new RelayCommand(_ => OpenReportFolder());
@@ -83,6 +85,7 @@ public class MainViewModel : ViewModelBase
     public RelayCommand SelectSavePathCommand { get; }
     public RelayCommand StartInspectionCommand { get; }
     public AsyncRelayCommand RunStorageTestCommand { get; }
+    public RelayCommand RunKeyboardTestCommand { get; }
     public AsyncRelayCommand RunCpuTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
     public RelayCommand OpenReportFolderCommand { get; }
@@ -156,6 +159,54 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"ストレージ検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunKeyboardTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "キーボード検査を開始します...";
+
+            // DIからKeyboardTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(KeyboardTestViewModel)) as KeyboardTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("キーボード検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // キーボード検査ウィンドウを表示
+            var window = new Views.KeyboardTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var result = viewModel.OnCompleted != null
+                    ? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                        .GetRequiredService<KeyboardInspectionService>(App.ServiceProvider!)
+                        .ExecuteAsync(_session.AttachmentsPath).Result
+                    : new KeyboardResult { Result = "cancelled" };
+
+                _session.Report.Keyboard = result;
+                StatusMessage = $"キーボード検査完了: {result.Result}";
+
+                MessageBox.Show($"キーボード検査完了\n押下キー数: {result.PressedKeys} / {result.TotalKeys}",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "キーボード検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"キーボード検査に失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

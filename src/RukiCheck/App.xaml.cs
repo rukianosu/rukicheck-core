@@ -10,6 +10,7 @@ namespace RukiCheck;
 public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
+    public static ServiceProvider? ServiceProvider { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -36,8 +37,10 @@ public partial class App : Application
 
         // ViewModels
         services.AddTransient<MainViewModel>();
+        services.AddTransient<KeyboardTestViewModel>();
 
         _serviceProvider = services.BuildServiceProvider();
+        ServiceProvider = _serviceProvider;
 
         // MainWindowを表示
         var mainWindow = new Views.MainWindow
