@@ -41,6 +41,9 @@ public class MainViewModel : ViewModelBase
         StartInspectionCommand = new RelayCommand(_ => StartInspection(), _ => CanStartInspection());
         RunStorageTestCommand = new AsyncRelayCommand(async _ => await RunStorageTestAsync());
         RunKeyboardTestCommand = new RelayCommand(_ => RunKeyboardTest());
+        RunMicrophoneTestCommand = new RelayCommand(_ => RunMicrophoneTest());
+        RunSpeakerTestCommand = new RelayCommand(_ => RunSpeakerTest());
+        RunCameraTestCommand = new RelayCommand(_ => RunCameraTest());
         RunTrackpadTestCommand = new RelayCommand(_ => RunTrackpadTest());
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
@@ -87,6 +90,9 @@ public class MainViewModel : ViewModelBase
     public RelayCommand StartInspectionCommand { get; }
     public AsyncRelayCommand RunStorageTestCommand { get; }
     public RelayCommand RunKeyboardTestCommand { get; }
+    public RelayCommand RunMicrophoneTestCommand { get; }
+    public RelayCommand RunSpeakerTestCommand { get; }
+    public RelayCommand RunCameraTestCommand { get; }
     public RelayCommand RunTrackpadTestCommand { get; }
     public AsyncRelayCommand RunCpuTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
@@ -254,6 +260,141 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"トラックパッド検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunMicrophoneTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "マイク検査を開始します...";
+
+            // DIからMicrophoneTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(MicrophoneTestViewModel)) as MicrophoneTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("マイク検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // マイク検査ウィンドウを表示
+            var window = new Views.MicrophoneTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(MicrophoneInspectionService)) as MicrophoneInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new MicrophoneResult { Recorded = false };
+
+                _session.Report.Microphone = result;
+                StatusMessage = $"マイク検査完了: {(result.Confirmed ? "正常" : "異常")}";
+
+                MessageBox.Show($"マイク検査完了\n録音: {(result.Recorded ? "成功" : "失敗")}\n確認: {(result.Confirmed ? "正常" : "異常")}",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "マイク検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"マイク検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunSpeakerTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "スピーカー検査を開始します...";
+
+            // DIからSpeakerTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(SpeakerTestViewModel)) as SpeakerTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("スピーカー検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // スピーカー検査ウィンドウを表示
+            var window = new Views.SpeakerTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(SpeakerInspectionService)) as SpeakerInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new SpeakerResult();
+
+                _session.Report.Speaker = result;
+                StatusMessage = $"スピーカー検査完了: 左={result.Left}, 右={result.Right}";
+
+                MessageBox.Show($"スピーカー検査完了\n左チャンネル: {(result.Left ? "正常" : "異常")}\n右チャンネル: {(result.Right ? "正常" : "異常")}",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "スピーカー検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"スピーカー検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunCameraTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "カメラ検査を開始します...";
+
+            // DIからCameraTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(CameraTestViewModel)) as CameraTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("カメラ検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // カメラ検査ウィンドウを表示
+            var window = new Views.CameraTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(CameraInspectionService)) as CameraInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new CameraResult { Captured = false };
+
+                _session.Report.Camera = result;
+                StatusMessage = $"カメラ検査完了: {(result.Captured ? "成功" : "失敗")}";
+
+                MessageBox.Show($"カメラ検査完了\nキャプチャ: {(result.Captured ? "成功" : "失敗")}\nデバイス: {result.DeviceName}",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "カメラ検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"カメラ検査に失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

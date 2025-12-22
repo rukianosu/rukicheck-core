@@ -40,6 +40,9 @@ public partial class App : Application
         services.AddTransient<MainViewModel>();
         services.AddTransient<KeyboardTestViewModel>();
         services.AddTransient<TrackpadTestViewModel>();
+        services.AddTransient<MicrophoneTestViewModel>();
+        services.AddTransient<SpeakerTestViewModel>();
+        services.AddTransient<CameraTestViewModel>();
 
         _serviceProvider = services.BuildServiceProvider();
         ServiceProvider = _serviceProvider;

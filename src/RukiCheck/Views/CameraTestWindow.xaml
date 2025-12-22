@@ -1,0 +1,206 @@
+<Window x:Class="RukiCheck.Views.CameraTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="📷 カメラ検査" Height="750" Width="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FA">
+
+    <Grid>
+        <!-- グラデーション背景 -->
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#E8EAF6" Offset="0"/>
+                <GradientStop Color="#C5CAE9" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ヘッダー -->
+        <Border Grid.Row="0" Background="#673AB7" Padding="20" Margin="20,20,20,10" CornerRadius="10">
+            <Border.Effect>
+                <DropShadowEffect ShadowDepth="3" BlurRadius="10" Opacity="0.3"/>
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock Text="📷 カメラ検査" FontSize="28" FontWeight="Bold"
+                           Foreground="White" HorizontalAlignment="Center"/>
+                <TextBlock Text="カメラのプレビューを確認して、キャプチャしてください" FontSize="14"
+                           Foreground="White" Opacity="0.9" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- カメラプレビュー -->
+        <Border Grid.Row="1" Background="White" CornerRadius="15" Margin="20" Padding="20"
+                BorderBrush="#673AB7" BorderThickness="3">
+            <Border.Effect>
+                <DropShadowEffect ShadowDepth="5" BlurRadius="15" Opacity="0.2"/>
+            </Border.Effect>
+            <Grid>
+                <!-- プレビュー画像 -->
+                <Border Background="Black" CornerRadius="10">
+                    <Image Source="{Binding PreviewImage}" Stretch="Uniform"/>
+                </Border>
+
+                <!-- カメラ未起動時のメッセージ -->
+                <Border Background="#80000000" CornerRadius="10">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCameraOpen}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="📷" FontSize="80" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                        <TextBlock Text="カメラを起動できませんでした" FontSize="20" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center"/>
+                        <TextBlock Text="カメラが接続されているか確認してください" FontSize="14"
+                                   Foreground="White" Opacity="0.8" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- キャプチャ済みオーバーレイ -->
+                <Border Background="#80673AB7" CornerRadius="10" VerticalAlignment="Bottom" Margin="10">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCaptured}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="15">
+                        <TextBlock Text="✅" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="キャプチャ完了" FontSize="18" FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ステータスメッセージ -->
+        <Border Grid.Row="2" Background="White" Padding="15" Margin="20,10" CornerRadius="10"
+                BorderBrush="#673AB7" BorderThickness="2">
+            <Border.Effect>
+                <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+            </Border.Effect>
+            <TextBlock Text="{Binding StatusMessage}" FontSize="16" FontWeight="Bold"
+                       Foreground="#673AB7" HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="20">
+            <!-- キャプチャボタン -->
+            <Button Content="📸 キャプチャ" Command="{Binding CaptureCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#673AB7" Foreground="White" BorderThickness="0"
+                    Cursor="Hand" Margin="5">
+                <Button.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                </Button.Effect>
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#7E57C2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- 撮り直しボタン -->
+            <Button Content="🔄 撮り直し" Command="{Binding RetakeCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#9E9E9E" Foreground="White" BorderThickness="0"
+                    Cursor="Hand" Margin="5">
+                <Button.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                </Button.Effect>
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#E0E0E0"/>
+                                <Setter Property="Foreground" Value="#9E9E9E"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- 完了ボタン -->
+            <Button Content="✅ 完了" Command="{Binding CompleteCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#4CAF50" Foreground="White" BorderThickness="0"
+                    Cursor="Hand" Margin="5">
+                <Button.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                </Button.Effect>
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#66BB6A"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
