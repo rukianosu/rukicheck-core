@@ -25,6 +25,9 @@ public class InspectionReport
     [JsonPropertyName("camera")]
     public CameraResult? Camera { get; set; }
 
+    [JsonPropertyName("trackpad")]
+    public TrackpadResult? Trackpad { get; set; }
+
     [JsonPropertyName("cpu")]
     public CpuResult? Cpu { get; set; }
 }

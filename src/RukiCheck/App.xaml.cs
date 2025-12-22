@@ -33,11 +33,13 @@ public partial class App : Application
         services.AddTransient<MicrophoneInspectionService>();
         services.AddTransient<SpeakerInspectionService>();
         services.AddTransient<CameraInspectionService>();
+        services.AddTransient<TrackpadInspectionService>();
         services.AddTransient<CpuInspectionService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
         services.AddTransient<KeyboardTestViewModel>();
+        services.AddTransient<TrackpadTestViewModel>();
 
         _serviceProvider = services.BuildServiceProvider();
         ServiceProvider = _serviceProvider;

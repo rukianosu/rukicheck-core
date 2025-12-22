@@ -41,6 +41,7 @@ public class MainViewModel : ViewModelBase
         StartInspectionCommand = new RelayCommand(_ => StartInspection(), _ => CanStartInspection());
         RunStorageTestCommand = new AsyncRelayCommand(async _ => await RunStorageTestAsync());
         RunKeyboardTestCommand = new RelayCommand(_ => RunKeyboardTest());
+        RunTrackpadTestCommand = new RelayCommand(_ => RunTrackpadTest());
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
         OpenReportFolderCommand = new RelayCommand(_ => OpenReportFolder());
@@ -86,6 +87,7 @@ public class MainViewModel : ViewModelBase
     public RelayCommand StartInspectionCommand { get; }
     public AsyncRelayCommand RunStorageTestCommand { get; }
     public RelayCommand RunKeyboardTestCommand { get; }
+    public RelayCommand RunTrackpadTestCommand { get; }
     public AsyncRelayCommand RunCpuTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
     public RelayCommand OpenReportFolderCommand { get; }
@@ -207,6 +209,51 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"キーボード検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunTrackpadTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "トラックパッド検査を開始します...";
+
+            // DIからTrackpadTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(TrackpadTestViewModel)) as TrackpadTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("トラックパッド検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // トラックパッド検査ウィンドウを表示
+            var window = new Views.TrackpadTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(TrackpadInspectionService)) as TrackpadInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new TrackpadResult { Result = "error" };
+
+                _session.Report.Trackpad = result;
+                StatusMessage = $"トラックパッド検査完了: {result.Result}";
+
+                MessageBox.Show($"トラックパッド検査完了\n結果: {result.Result}\n完了項目: {viewModel.CompletedTests}/4",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "トラックパッド検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"トラックパッド検査に失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

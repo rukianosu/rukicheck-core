@@ -75,6 +75,12 @@ public class HtmlReportGenerator
             sb.AppendLine(BuildCameraSection(report.Camera));
         }
 
+        // トラックパッド
+        if (report.Trackpad != null)
+        {
+            sb.AppendLine(BuildTrackpadSection(report.Trackpad));
+        }
+
         // CPU
         if (report.Cpu != null)
         {
@@ -263,6 +269,48 @@ public class HtmlReportGenerator
         if (!string.IsNullOrEmpty(camera.Error))
         {
             sb.AppendLine($"                <tr><th>エラー</th><td class=\"error\">{camera.Error}</td></tr>");
+        }
+
+        sb.AppendLine("            </table>");
+        sb.AppendLine("        </div>");
+
+        return sb.ToString();
+    }
+
+    private string BuildTrackpadSection(TrackpadResult trackpad)
+    {
+        var statusClass = trackpad.Result switch
+        {
+            "pass" => "status-ok",
+            "warn" => "status-warn",
+            _ => "status-danger"
+        };
+
+        var statusLabel = trackpad.Result switch
+        {
+            "pass" => "✅ 正常",
+            "warn" => "⚠️ 一部不良",
+            _ => "❌ 不良"
+        };
+
+        var sb = new StringBuilder();
+        sb.AppendLine("        <div class=\"section\">");
+        sb.AppendLine("            <h2>🖱️ トラックパッド</h2>");
+        sb.AppendLine($"            <div class=\"{statusClass}\">{statusLabel}</div>");
+        sb.AppendLine("            <table>");
+        sb.AppendLine($"                <tr><th>カーソル移動</th><td>{(trackpad.CursorMoved ? "✅ 正常" : "❌ 不良")}</td></tr>");
+        sb.AppendLine($"                <tr><th>左クリック</th><td>{(trackpad.LeftClick ? "✅ 正常" : "❌ 不良")}</td></tr>");
+        sb.AppendLine($"                <tr><th>右クリック</th><td>{(trackpad.RightClick ? "✅ 正常" : "❌ 不良")}</td></tr>");
+        sb.AppendLine($"                <tr><th>スクロール</th><td>{(trackpad.ScrollDetected ? "✅ 正常" : "❌ 不良")}</td></tr>");
+
+        if (!string.IsNullOrEmpty(trackpad.Note))
+        {
+            sb.AppendLine($"                <tr><th>備考</th><td>{trackpad.Note}</td></tr>");
+        }
+
+        if (!string.IsNullOrEmpty(trackpad.Error))
+        {
+            sb.AppendLine($"                <tr><th>エラー</th><td class=\"error\">{trackpad.Error}</td></tr>");
         }
 
         sb.AppendLine("            </table>");
