@@ -12,8 +12,8 @@ public class MemoryTestViewModel : ViewModelBase
 
     private bool _isTesting = false;
     private int _testProgress = 0;
-    private string _statusMessage = "「テスト開始」ボタンを押してください";
-    private int _testSizeMb = 512;
+    private string _statusMessage = "テストモードを選択して「テスト開始」ボタンを押してください";
+    private MemoryTestMode _selectedMode = MemoryTestMode.Standard; // デフォルトは標準
     private long _availableMb = 0;
     private double _totalGb = 0;
     private bool _testCompleted = false;
@@ -24,10 +24,15 @@ public class MemoryTestViewModel : ViewModelBase
     private double _readSpeed = 0;
     private double _testDuration = 0;
     private bool? _userConfirmed = null;
+    private int _testSizeMb = 0;
+    private int _totalPasses = 0;
 
     public MemoryTestViewModel(MemoryTestService service)
     {
         _service = service;
+
+        // デフォルトで標準モードを設定
+        _service.SetTestMode(MemoryTestMode.Standard);
 
         // サービスのイベントをサブスクライブ
         _service.OnProgressChanged += (progress) =>
@@ -67,14 +72,42 @@ public class MemoryTestViewModel : ViewModelBase
         set => SetProperty(ref _statusMessage, value);
     }
 
-    public int TestSizeMb
+    public MemoryTestMode SelectedMode
     {
-        get => _testSizeMb;
+        get => _selectedMode;
         set
         {
-            if (SetProperty(ref _testSizeMb, value))
+            if (SetProperty(ref _selectedMode, value))
             {
-                _service.SetTestSize(value);
+                _service.SetTestMode(value);
+            }
+        }
+    }
+
+    public bool IsStandardMode
+    {
+        get => _selectedMode == MemoryTestMode.Standard;
+        set
+        {
+            if (value)
+            {
+                SelectedMode = MemoryTestMode.Standard;
+                OnPropertyChanged(nameof(IsStandardMode));
+                OnPropertyChanged(nameof(IsThoroughMode));
+            }
+        }
+    }
+
+    public bool IsThoroughMode
+    {
+        get => _selectedMode == MemoryTestMode.Thorough;
+        set
+        {
+            if (value)
+            {
+                SelectedMode = MemoryTestMode.Thorough;
+                OnPropertyChanged(nameof(IsStandardMode));
+                OnPropertyChanged(nameof(IsThoroughMode));
             }
         }
     }
@@ -139,6 +172,18 @@ public class MemoryTestViewModel : ViewModelBase
         set => SetProperty(ref _userConfirmed, value);
     }
 
+    public int TestSizeMb
+    {
+        get => _testSizeMb;
+        set => SetProperty(ref _testSizeMb, value);
+    }
+
+    public int TotalPasses
+    {
+        get => _totalPasses;
+        set => SetProperty(ref _totalPasses, value);
+    }
+
     #endregion
 
     #region Commands
@@ -179,13 +224,18 @@ public class MemoryTestViewModel : ViewModelBase
             ReadSpeed = result.ReadSpeedMbps;
             TestDuration = result.TestDurationSec;
             TestSizeMb = result.TestedMb;
+            TotalPasses = result.TotalPasses;
+
+            string modeName = _selectedMode == MemoryTestMode.Standard ? "標準" : "徹底";
 
             if (success)
             {
-                StatusMessage = $"✅ テスト成功！全{PatternsTested}パターン合格";
+                StatusMessage = $"✅ テスト成功！全{PatternsTested}パターン合格（{modeName}モード）";
                 MessageBox.Show(
                     $"メモリテスト成功！\n\n" +
+                    $"モード: {modeName}\n" +
                     $"テストサイズ: {TestSizeMb} MB\n" +
+                    $"パス数: {TotalPasses}回\n" +
                     $"パターン: {PatternsTested}個すべて合格\n" +
                     $"書き込み速度: {WriteSpeed:F0} MB/s\n" +
                     $"読み込み速度: {ReadSpeed:F0} MB/s\n" +
@@ -238,12 +288,14 @@ public class MemoryTestViewModel : ViewModelBase
         TestCompleted = false;
         TestPassed = false;
         UserConfirmed = null;
-        StatusMessage = "「テスト開始」ボタンを押してください";
+        StatusMessage = "テストモードを選択して「テスト開始」ボタンを押してください";
         PatternsTested = 0;
         FailedPatterns = 0;
         WriteSpeed = 0;
         ReadSpeed = 0;
         TestDuration = 0;
+        TestSizeMb = 0;
+        TotalPasses = 0;
     }
 
     #endregion

@@ -55,26 +55,39 @@
                     </StackPanel>
                 </Border>
 
-                <!-- テスト設定 -->
+                <!-- テストモード選択 -->
                 <Border Background="White" CornerRadius="10" Padding="20" Margin="0,10"
                         BorderBrush="#E0E0E0" BorderThickness="1">
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
                     </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="⚙️ テスト設定" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <TextBlock Text="テストサイズ（推奨: 512MB - 1024MB）" FontSize="12" Foreground="#666" Margin="0,0,0,5"/>
+                        <TextBlock Text="⚙️ テストモード" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <TextBlock Text="テストサイズ:" VerticalAlignment="Center" Width="100"/>
-                            <TextBox Text="{Binding TestSizeMb, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="100" Height="30" VerticalContentAlignment="Center"
-                                     IsEnabled="{Binding IsTesting, Converter={StaticResource InverseBoolConverter}}"/>
-                            <TextBlock Text=" MB" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                        </StackPanel>
+                        <!-- 標準モード -->
+                        <RadioButton GroupName="TestMode" IsChecked="{Binding IsStandardMode}"
+                                     Margin="0,5" IsEnabled="{Binding IsTesting, Converter={StaticResource InverseBoolConverter}}">
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="🟢 標準モード（推奨）" FontSize="14" FontWeight="Bold" Foreground="#4CAF50"/>
+                                <TextBlock Text="検出率: 85-90% | 所要時間: 1-3分" FontSize="12" Foreground="#666" Margin="0,2,0,0"/>
+                                <TextBlock Text="範囲: メモリの80%（最大6GB）| パターン: 8種類 | パス: 3回"
+                                           FontSize="11" Foreground="#999" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </RadioButton>
 
-                        <TextBlock Text="※ 利用可能メモリの50%以下に自動調整されます"
-                                   FontSize="11" Foreground="#999" Margin="0,5,0,0"/>
+                        <!-- 徹底モード -->
+                        <RadioButton GroupName="TestMode" IsChecked="{Binding IsThoroughMode}"
+                                     Margin="0,10,0,5" IsEnabled="{Binding IsTesting, Converter={StaticResource InverseBoolConverter}}">
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="🔴 徹底モード" FontSize="14" FontWeight="Bold" Foreground="#FF5722"/>
+                                <TextBlock Text="検出率: 95%以上 | 所要時間: 3-8分" FontSize="12" Foreground="#666" Margin="0,2,0,0"/>
+                                <TextBlock Text="範囲: メモリの90%（最大8GB）| パターン: 12種類 | パス: 5回"
+                                           FontSize="11" Foreground="#999" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </RadioButton>
+
+                        <TextBlock Text="※ テストサイズは利用可能メモリに応じて自動調整されます"
+                                   FontSize="11" Foreground="#999" Margin="0,10,0,0" FontStyle="Italic"/>
                     </StackPanel>
                 </Border>
 
@@ -145,6 +158,11 @@
                                 <TextBlock FontSize="13" Margin="0,2">
                                     <Run Text="テストサイズ: "/>
                                     <Run Text="{Binding TestSizeMb, StringFormat={}{0:N0} MB}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="パス数: "/>
+                                    <Run Text="{Binding TotalPasses}"/>
+                                    <Run Text="回"/>
                                 </TextBlock>
                                 <TextBlock FontSize="13" Margin="0,2">
                                     <Run Text="パターンテスト: "/>

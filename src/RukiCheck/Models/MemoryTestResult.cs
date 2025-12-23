@@ -14,10 +14,22 @@ public class MemoryTestResult
     public bool TestExecuted { get; set; }
 
     /// <summary>
+    /// テストモード（Standard / Thorough）
+    /// </summary>
+    [JsonPropertyName("test_mode")]
+    public string? TestMode { get; set; }
+
+    /// <summary>
     /// テストしたメモリサイズ（MB）
     /// </summary>
     [JsonPropertyName("tested_mb")]
     public int TestedMb { get; set; }
+
+    /// <summary>
+    /// 実行したパス数
+    /// </summary>
+    [JsonPropertyName("total_passes")]
+    public int TotalPasses { get; set; }
 
     /// <summary>
     /// 利用可能なメモリ（MB）
