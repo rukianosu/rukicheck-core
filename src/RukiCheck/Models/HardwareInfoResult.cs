@@ -24,6 +24,12 @@ public class HardwareInfoResult
     /// </summary>
     [JsonPropertyName("gpu")]
     public List<GpuInfo> Gpus { get; set; } = new();
+
+    /// <summary>
+    /// BitLocker情報
+    /// </summary>
+    [JsonPropertyName("bitlocker")]
+    public BitLockerInfo BitLocker { get; set; } = new();
 }
 
 /// <summary>
@@ -168,4 +174,70 @@ public class GpuInfo
     /// </summary>
     [JsonPropertyName("video_processor")]
     public string VideoProcessor { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// BitLocker情報
+/// </summary>
+public class BitLockerInfo
+{
+    /// <summary>
+    /// BitLockerボリュームリスト
+    /// </summary>
+    [JsonPropertyName("volumes")]
+    public List<BitLockerVolume> Volumes { get; set; } = new();
+
+    /// <summary>
+    /// 取得エラー（権限不足など）
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// 注記（管理者権限が必要な旨など）
+    /// </summary>
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// BitLockerボリューム情報
+/// </summary>
+public class BitLockerVolume
+{
+    /// <summary>
+    /// ドライブレター（例: C:）
+    /// </summary>
+    [JsonPropertyName("drive_letter")]
+    public string DriveLetter { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 暗号化されているか
+    /// </summary>
+    [JsonPropertyName("is_encrypted")]
+    public bool IsEncrypted { get; set; }
+
+    /// <summary>
+    /// 保護状態（Protection On/Off）
+    /// </summary>
+    [JsonPropertyName("protection_status")]
+    public string ProtectionStatus { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 暗号化の割合（%）
+    /// </summary>
+    [JsonPropertyName("encryption_percentage")]
+    public int EncryptionPercentage { get; set; }
+
+    /// <summary>
+    /// 回復キー（取得できた場合）
+    /// </summary>
+    [JsonPropertyName("recovery_keys")]
+    public List<string> RecoveryKeys { get; set; } = new();
+
+    /// <summary>
+    /// エラーメッセージ（取得失敗時）
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
 }

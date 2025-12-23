@@ -181,6 +181,57 @@ public class HtmlReportGenerator
             }
         }
 
+        // BitLocker情報
+        sb.AppendLine("            <h3>🔐 BitLocker暗号化</h3>");
+
+        if (!string.IsNullOrEmpty(hardware.BitLocker.Error))
+        {
+            sb.AppendLine("            <table>");
+            sb.AppendLine($"                <tr><th>状態</th><td class=\"error\">❌ {hardware.BitLocker.Error}</td></tr>");
+            if (!string.IsNullOrEmpty(hardware.BitLocker.Note))
+            {
+                sb.AppendLine($"                <tr><th>注記</th><td class=\"recommendation\">{hardware.BitLocker.Note}</td></tr>");
+            }
+            sb.AppendLine("            </table>");
+        }
+        else if (hardware.BitLocker.Volumes.Count == 0)
+        {
+            sb.AppendLine("            <table>");
+            sb.AppendLine($"                <tr><th>状態</th><td>BitLockerで暗号化されたボリュームはありません</td></tr>");
+            if (!string.IsNullOrEmpty(hardware.BitLocker.Note))
+            {
+                sb.AppendLine($"                <tr><th>注記</th><td>{hardware.BitLocker.Note}</td></tr>");
+            }
+            sb.AppendLine("            </table>");
+        }
+        else
+        {
+            foreach (var volume in hardware.BitLocker.Volumes)
+            {
+                sb.AppendLine("            <table>");
+                sb.AppendLine($"                <tr><th>ドライブ</th><td><strong>{volume.DriveLetter}</strong></td></tr>");
+                sb.AppendLine($"                <tr><th>暗号化状態</th><td>{(volume.IsEncrypted ? "🔒 暗号化済み" : "🔓 暗号化なし")}</td></tr>");
+                sb.AppendLine($"                <tr><th>保護状態</th><td>{volume.ProtectionStatus}</td></tr>");
+                sb.AppendLine($"                <tr><th>暗号化率</th><td>{volume.EncryptionPercentage}%</td></tr>");
+
+                if (volume.RecoveryKeys.Count > 0)
+                {
+                    sb.AppendLine($"                <tr><th>回復キー</th><td>");
+                    foreach (var key in volume.RecoveryKeys)
+                    {
+                        sb.AppendLine($"                    <code style=\"display:block; background:#f0f0f0; padding:10px; margin:5px 0; font-family:monospace; word-break:break-all;\">{key}</code>");
+                    }
+                    sb.AppendLine($"                </td></tr>");
+                }
+                else if (!string.IsNullOrEmpty(volume.Error))
+                {
+                    sb.AppendLine($"                <tr><th>回復キー</th><td class=\"error\">{volume.Error}</td></tr>");
+                }
+
+                sb.AppendLine("            </table>");
+            }
+        }
+
         sb.AppendLine("        </div>");
         return sb.ToString();
     }
