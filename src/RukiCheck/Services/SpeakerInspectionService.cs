@@ -29,6 +29,61 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
     }
 
     /// <summary>
+    /// パンニングテスト音再生（左から右へスムーズに移動）
+    /// </summary>
+    public async Task PlayPanningTestAsync()
+    {
+        const int frequency = 440; // A4 (ラ音)
+        const int durationMs = 5000; // 5秒
+        const int updateIntervalMs = 50; // 50msごとに更新
+
+        using var outputDevice = new WaveOutEvent();
+
+        // デバイスの対応チャンネル数を確認
+        var deviceCapabilities = WaveOut.GetCapabilities(0);
+        var deviceChannels = deviceCapabilities.Channels;
+
+        if (deviceChannels < 2)
+        {
+            // モノラルデバイスではパンニングテストは意味がないため、通常の音を再生
+            await PlayTestToneAsync(1.0f, 1.0f);
+            return;
+        }
+
+        // ステレオ音源を生成
+        var sineWave = new SignalGenerator
+        {
+            Gain = 0.2,
+            Frequency = frequency,
+            Type = SignalGeneratorType.Sin
+        };
+
+        // ステレオパンニング
+        var panned = new PanningSampleProvider(sineWave)
+        {
+            Pan = -1.0f // 左から開始
+        };
+
+        outputDevice.Init(panned);
+        outputDevice.Play();
+
+        // パンを左から右へスムーズに移動
+        var elapsed = 0;
+        while (elapsed < durationMs && outputDevice.PlaybackState == PlaybackState.Playing)
+        {
+            // 進捗率 (0.0 ~ 1.0)
+            var progress = (float)elapsed / durationMs;
+            // Panの値を -1.0 (左) から +1.0 (右) へ変化
+            panned.Pan = -1.0f + (progress * 2.0f);
+
+            await Task.Delay(updateIntervalMs);
+            elapsed += updateIntervalMs;
+        }
+
+        outputDevice.Stop();
+    }
+
+    /// <summary>
     /// テスト音を再生（ステレオバランス指定）
     /// </summary>
     private async Task PlayTestToneAsync(float leftVolume, float rightVolume)

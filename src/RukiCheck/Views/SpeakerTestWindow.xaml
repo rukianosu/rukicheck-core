@@ -34,6 +34,40 @@
                            Foreground="White" HorizontalAlignment="Center"/>
                 <TextBlock Text="左右のスピーカーから順番にテスト音を再生します" FontSize="14"
                            Foreground="White" Opacity="0.9" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+
+                <!-- パンニングテストボタン -->
+                <Button Content="🎵 パンニングテスト (左→右へスムーズに移動)"
+                        Command="{Binding PlayPanningCommand}"
+                        Height="45" FontSize="14" FontWeight="Bold"
+                        Background="#2196F3" Foreground="White" BorderThickness="0"
+                        Cursor="Hand" Margin="0,15,0,0" HorizontalAlignment="Center" Width="350">
+                    <Button.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                    </Button.Effect>
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="8" Padding="10">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#1976D2"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#BDBDBD"/>
+                                    <Setter Property="Foreground" Value="#757575"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Border>
 

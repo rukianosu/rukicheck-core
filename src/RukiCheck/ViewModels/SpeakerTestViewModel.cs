@@ -12,6 +12,7 @@ public class SpeakerTestViewModel : ViewModelBase
 
     private bool _isPlayingLeft = false;
     private bool _isPlayingRight = false;
+    private bool _isPlayingPanning = false;
     private bool _leftTested = false;
     private bool _rightTested = false;
     private bool _leftConfirmed = false;
@@ -25,6 +26,7 @@ public class SpeakerTestViewModel : ViewModelBase
         // コマンド
         PlayLeftCommand = new AsyncRelayCommand(async _ => await PlayLeftAsync(), _ => !IsPlayingLeft && !LeftTested);
         PlayRightCommand = new AsyncRelayCommand(async _ => await PlayRightAsync(), _ => !IsPlayingRight && !RightTested);
+        PlayPanningCommand = new AsyncRelayCommand(async _ => await PlayPanningAsync(), _ => !IsPlayingPanning);
         ConfirmLeftYesCommand = new RelayCommand(_ => ConfirmLeft(true), _ => !LeftTested);
         ConfirmLeftNoCommand = new RelayCommand(_ => ConfirmLeft(false), _ => !LeftTested);
         ConfirmRightYesCommand = new RelayCommand(_ => ConfirmRight(true), _ => !RightTested);
@@ -53,6 +55,18 @@ public class SpeakerTestViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _isPlayingRight, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public bool IsPlayingPanning
+    {
+        get => _isPlayingPanning;
+        set
+        {
+            if (SetProperty(ref _isPlayingPanning, value))
             {
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -109,6 +123,7 @@ public class SpeakerTestViewModel : ViewModelBase
 
     public AsyncRelayCommand PlayLeftCommand { get; }
     public AsyncRelayCommand PlayRightCommand { get; }
+    public AsyncRelayCommand PlayPanningCommand { get; }
     public RelayCommand ConfirmLeftYesCommand { get; }
     public RelayCommand ConfirmLeftNoCommand { get; }
     public RelayCommand ConfirmRightYesCommand { get; }
@@ -161,6 +176,27 @@ public class SpeakerTestViewModel : ViewModelBase
         finally
         {
             IsPlayingRight = false;
+        }
+    }
+
+    private async Task PlayPanningAsync()
+    {
+        try
+        {
+            IsPlayingPanning = true;
+            StatusMessage = "🔊 パンニングテスト: 音が左から右へスムーズに移動します... (5秒間)";
+
+            await _service.PlayPanningTestAsync();
+
+            StatusMessage = "パンニングテストが完了しました";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"エラー: {ex.Message}";
+        }
+        finally
+        {
+            IsPlayingPanning = false;
         }
     }
 
@@ -223,6 +259,7 @@ public class SpeakerTestViewModel : ViewModelBase
     {
         IsPlayingLeft = false;
         IsPlayingRight = false;
+        IsPlayingPanning = false;
         LeftTested = false;
         RightTested = false;
         LeftConfirmed = false;
