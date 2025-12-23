@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -21,7 +22,7 @@ public class MainViewModel : ViewModelBase
     private string _managementId = string.Empty;
     private string _inspectionDate;
     private string _savePath = string.Empty;
-    private string _statusMessage = "管理番号と保存先を入力してください";
+    private string _statusMessage = "管理番号を入力して検品を開始してください";
     private bool _isInspectionStarted = false;
 
     private InspectionSession? _session;
@@ -124,7 +125,6 @@ public class MainViewModel : ViewModelBase
     private bool CanStartInspection()
     {
         return !string.IsNullOrWhiteSpace(ManagementId) &&
-               !string.IsNullOrWhiteSpace(SavePath) &&
                !IsInspectionStarted;
     }
 
@@ -132,10 +132,32 @@ public class MainViewModel : ViewModelBase
     {
         try
         {
+            // 実行ファイルのあるドライブを自動検出
+            var exePath = Assembly.GetExecutingAssembly().Location;
+            var exeDirectory = Path.GetDirectoryName(exePath);
+            if (string.IsNullOrEmpty(exeDirectory))
+            {
+                MessageBox.Show("実行ファイルの場所を特定できませんでした。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // ドライブルートを取得
+            var driveRoot = Path.GetPathRoot(exeDirectory);
+            if (string.IsNullOrEmpty(driveRoot))
+            {
+                MessageBox.Show("ドライブを特定できませんでした。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 管理番号のフォルダを作成
+            SavePath = Path.Combine(driveRoot, ManagementId);
+
             // 書き込み権限チェック
             if (!_orchestrator.CanWriteToPath(SavePath))
             {
-                MessageBox.Show("保存先に書き込み権限がありません。別のフォルダを選択してください。",
+                MessageBox.Show("保存先に書き込み権限がありません。管理者権限で実行してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }

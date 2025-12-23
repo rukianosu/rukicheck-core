@@ -55,12 +55,11 @@
                              IsReadOnly="True" Background="#f0f0f0"
                              Width="300" HorizontalAlignment="Left"/>
 
-                    <!-- 保存先 -->
+                    <!-- 保存先（自動設定） -->
                     <Label Grid.Row="2" Grid.Column="0" Content="保存先:" VerticalAlignment="Center"/>
-                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
-                        <TextBox Text="{Binding SavePath}" Width="400" IsReadOnly="True" Background="#f0f0f0"/>
-                        <Button Content="📁 選択" Command="{Binding SelectSavePathCommand}" Width="100"/>
-                    </StackPanel>
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SavePath}" Width="500"
+                             IsReadOnly="True" Background="#f0f0f0" HorizontalAlignment="Left"
+                             ToolTip="実行ファイルのあるドライブに自動的に保存されます"/>
                 </Grid>
 
                 <Button Content="🚀 検品開始" Command="{Binding StartInspectionCommand}"
