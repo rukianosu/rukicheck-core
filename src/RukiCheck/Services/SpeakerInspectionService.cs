@@ -42,29 +42,21 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
         var deviceCapabilities = WaveOut.GetCapabilities(0);
         var deviceChannels = deviceCapabilities.Channels;
 
-        // モノラル音源を生成
+        // ステレオ音源を生成（SignalGeneratorはデフォルトでステレオ）
         var sineWave = new SignalGenerator
         {
             Gain = 0.2,
             Frequency = frequency,
             Type = SignalGeneratorType.Sin
-        };
-
-        // WaveFormatを明示的にモノラルに設定
-        sineWave.SetWaveFormat(44100, 1); // サンプルレート44100Hz, モノラル(1チャンネル)
-
-        var signal = sineWave.Take(TimeSpan.FromMilliseconds(durationMs));
+        }.Take(TimeSpan.FromMilliseconds(durationMs));
 
         ISampleProvider audioSource;
 
-        // デバイスがステレオ対応の場合、ステレオに変換してパンニング
+        // デバイスがステレオ対応の場合、パンニング
         if (deviceChannels >= 2)
         {
-            // モノラルをステレオに変換
-            var stereoSignal = new MonoToStereoSampleProvider(signal);
-
             // ステレオパンニング
-            var panned = new PanningSampleProvider(stereoSignal)
+            var panned = new PanningSampleProvider(sineWave)
             {
                 Pan = leftVolume > rightVolume ? -1.0f : 1.0f
             };
@@ -73,8 +65,12 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
         }
         else
         {
-            // モノラルデバイスの場合はそのまま使用
-            audioSource = signal;
+            // モノラルデバイスの場合、ステレオをモノラルに変換
+            audioSource = new StereoToMonoSampleProvider(sineWave)
+            {
+                LeftVolume = leftVolume,
+                RightVolume = rightVolume
+            };
         }
 
         outputDevice.Init(audioSource);

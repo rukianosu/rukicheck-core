@@ -31,8 +31,9 @@ public class MarkdownReportGenerator
         sb.AppendLine();
         sb.AppendLine($"- **管理番号**: {report.Meta.ManagementId}");
         sb.AppendLine($"- **検品日**: {report.Meta.InspectionDate}");
-        sb.AppendLine($"- **検品者**: {report.Meta.Inspector}");
-        sb.AppendLine($"- **レポート作成日時**: {report.Meta.CreatedAt}");
+        sb.AppendLine($"- **検品時刻**: {report.Meta.InspectionTime}");
+        sb.AppendLine($"- **検品モード**: {report.Meta.Mode}");
+        sb.AppendLine($"- **ツールバージョン**: {report.Meta.ToolVersion}");
         sb.AppendLine();
 
         // ハードウェア情報
@@ -289,10 +290,21 @@ public class MarkdownReportGenerator
         };
 
         sb.AppendLine($"- **判定**: {statusIcon} {storage.Status.ToUpper()}");
-        sb.AppendLine($"- **ドライブ**: {storage.DriveName}");
+        sb.AppendLine($"- **ドライブ**: {storage.Drive}");
         sb.AppendLine($"- **総容量**: {storage.TotalGb:F1} GB");
-        sb.AppendLine($"- **使用済み**: {storage.UsedGb:F1} GB");
+        sb.AppendLine($"- **使用済み**: {(storage.TotalGb - storage.FreeGb):F1} GB");
         sb.AppendLine($"- **空き容量**: {storage.FreeGb:F1} GB ({storage.FreePercent:F1}%)");
+
+        if (!string.IsNullOrEmpty(storage.Recommendation))
+        {
+            sb.AppendLine($"- **推奨**: {storage.Recommendation}");
+        }
+
+        if (!string.IsNullOrEmpty(storage.Error))
+        {
+            sb.AppendLine($"- **エラー**: {storage.Error}");
+        }
+
         sb.AppendLine();
 
         return sb.ToString();
@@ -304,17 +316,31 @@ public class MarkdownReportGenerator
         sb.AppendLine("## ⌨️ キーボード検査");
         sb.AppendLine();
 
-        sb.AppendLine($"- **確認済みキー数**: {keyboard.ConfirmedKeys}/{keyboard.TotalKeys}");
-        sb.AppendLine($"- **完了**: {(keyboard.Completed ? "✅ はい" : "❌ いいえ")}");
+        var resultIcon = keyboard.Result switch
+        {
+            "pass" => "✅",
+            "warn" => "⚠️",
+            "fail" => "❌",
+            _ => "❓"
+        };
+
+        sb.AppendLine($"- **判定**: {resultIcon} {keyboard.Result.ToUpper()}");
+        sb.AppendLine($"- **レイアウト**: {keyboard.Layout}");
+        sb.AppendLine($"- **押下キー数**: {keyboard.PressedKeys}/{keyboard.TotalKeys}");
 
         if (keyboard.MissingKeys.Count > 0)
         {
-            sb.AppendLine($"- **未確認キー**: {string.Join(", ", keyboard.MissingKeys)}");
+            sb.AppendLine($"- **未押下キー**: {string.Join(", ", keyboard.MissingKeys)}");
         }
 
         if (!string.IsNullOrEmpty(keyboard.Note))
         {
             sb.AppendLine($"- **注記**: {keyboard.Note}");
+        }
+
+        if (!string.IsNullOrEmpty(keyboard.Error))
+        {
+            sb.AppendLine($"- **エラー**: {keyboard.Error}");
         }
 
         sb.AppendLine();
@@ -403,14 +429,28 @@ public class MarkdownReportGenerator
         sb.AppendLine("## 🖱️ トラックパッド検査");
         sb.AppendLine();
 
-        sb.AppendLine($"- **カーソル移動**: {(trackpad.CursorMovement ? "✅ 正常" : "❌ 異常")}");
+        var resultIcon = trackpad.Result switch
+        {
+            "pass" => "✅",
+            "warn" => "⚠️",
+            "fail" => "❌",
+            _ => "❓"
+        };
+
+        sb.AppendLine($"- **判定**: {resultIcon} {trackpad.Result.ToUpper()}");
+        sb.AppendLine($"- **カーソル移動**: {(trackpad.CursorMoved ? "✅ 正常" : "❌ 異常")}");
         sb.AppendLine($"- **左クリック**: {(trackpad.LeftClick ? "✅ 正常" : "❌ 異常")}");
         sb.AppendLine($"- **右クリック**: {(trackpad.RightClick ? "✅ 正常" : "❌ 異常")}");
-        sb.AppendLine($"- **スクロール**: {(trackpad.Scroll ? "✅ 正常" : "❌ 異常")}");
+        sb.AppendLine($"- **スクロール**: {(trackpad.ScrollDetected ? "✅ 正常" : "❌ 異常")}");
 
         if (!string.IsNullOrEmpty(trackpad.Note))
         {
             sb.AppendLine($"- **注記**: {trackpad.Note}");
+        }
+
+        if (!string.IsNullOrEmpty(trackpad.Error))
+        {
+            sb.AppendLine($"- **エラー**: {trackpad.Error}");
         }
 
         sb.AppendLine();
@@ -423,11 +463,22 @@ public class MarkdownReportGenerator
         sb.AppendLine("## 🖥️ CPU簡易負荷テスト");
         sb.AppendLine();
 
-        var passIcon = cpu.Passed ? "✅" : "❌";
-        sb.AppendLine($"- **判定**: {passIcon} {(cpu.Passed ? "正常" : "異常")}");
-        sb.AppendLine($"- **テスト時間**: {cpu.TestDurationSeconds} 秒");
-        sb.AppendLine($"- **フリーズ**: {(cpu.Freeze ? "❌ あり" : "✅ なし")}");
-        sb.AppendLine($"- **異常停止**: {(cpu.Crash ? "❌ あり" : "✅ なし")}");
+        var testIcon = cpu.StressTest switch
+        {
+            "completed" => "✅",
+            "failed" => "❌",
+            "not_started" => "❓",
+            _ => "❓"
+        };
+
+        sb.AppendLine($"- **ストレステスト**: {testIcon} {cpu.StressTest}");
+        sb.AppendLine($"- **テスト時間**: {cpu.DurationSec} 秒");
+        sb.AppendLine($"- **異常検出**: {(cpu.Abnormal ? "❌ あり" : "✅ なし")}");
+
+        if (cpu.Temperature.HasValue)
+        {
+            sb.AppendLine($"- **温度**: {cpu.Temperature.Value:F1}°C");
+        }
 
         if (!string.IsNullOrEmpty(cpu.Error))
         {
