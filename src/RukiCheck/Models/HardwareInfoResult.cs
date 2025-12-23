@@ -42,6 +42,12 @@ public class HardwareInfoResult
     /// </summary>
     [JsonPropertyName("storage_health")]
     public List<StorageHealthInfo> StorageHealth { get; set; } = new();
+
+    /// <summary>
+    /// Windowsライセンス認証情報
+    /// </summary>
+    [JsonPropertyName("windows_license")]
+    public WindowsLicenseInfo WindowsLicense { get; set; } = new();
 }
 
 /// <summary>
@@ -426,4 +432,58 @@ public class SmartAttribute
     /// </summary>
     [JsonPropertyName("raw_value")]
     public long RawValue { get; set; }
+}
+
+/// <summary>
+/// Windowsライセンス認証情報
+/// </summary>
+public class WindowsLicenseInfo
+{
+    /// <summary>
+    /// Windows エディション（例: Windows 11 Pro, Windows 10 Home）
+    /// </summary>
+    [JsonPropertyName("edition")]
+    public string Edition { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ライセンス認証状態（認証済み、未認証、猶予期間など）
+    /// </summary>
+    [JsonPropertyName("license_status")]
+    public string LicenseStatus { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ライセンスが認証済みかどうか
+    /// </summary>
+    [JsonPropertyName("is_activated")]
+    public bool IsActivated { get; set; }
+
+    /// <summary>
+    /// プロダクトキーの一部（下5桁など）
+    /// </summary>
+    [JsonPropertyName("partial_product_key")]
+    public string PartialProductKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ライセンスファミリー（例: Professional, Home）
+    /// </summary>
+    [JsonPropertyName("license_family")]
+    public string LicenseFamily { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 猶予期間の残り時間（分単位、該当する場合のみ）
+    /// </summary>
+    [JsonPropertyName("grace_period_remaining_minutes")]
+    public int? GracePeriodRemainingMinutes { get; set; }
+
+    /// <summary>
+    /// エラーメッセージ（取得失敗時）
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// 注記
+    /// </summary>
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
 }

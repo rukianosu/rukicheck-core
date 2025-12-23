@@ -35,6 +35,9 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
             // ストレージヘルス情報を収集
             result.StorageHealth = GetStorageHealthInfo();
+
+            // Windowsライセンス認証情報を収集
+            result.WindowsLicense = GetWindowsLicenseInfo();
         }
         catch (Exception ex)
         {
@@ -798,6 +801,110 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
             0xFC => "Newly Added Bad Flash Block",
             0xFE => "Free Fall Protection",
             _ => $"Unknown Attribute {id:X2}h"
+        };
+    }
+
+    /// <summary>
+    /// Windowsライセンス認証情報を取得
+    /// </summary>
+    private WindowsLicenseInfo GetWindowsLicenseInfo()
+    {
+        var licenseInfo = new WindowsLicenseInfo();
+
+        try
+        {
+            // SoftwareLicensingProduct からWindowsライセンス情報を取得
+            // ApplicationID = "55c92734-d682-4d71-983e-d6ec3f16059f" はWindowsを示す
+            var query = "SELECT * FROM SoftwareLicensingProduct WHERE ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f' AND PartialProductKey IS NOT NULL";
+            using var searcher = new ManagementObjectSearcher(query);
+
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                // ライセンスステータスを取得
+                var licenseStatus = Convert.ToInt32(obj["LicenseStatus"] ?? 0);
+                licenseInfo.LicenseStatus = GetLicenseStatusString(licenseStatus);
+                licenseInfo.IsActivated = licenseStatus == 1; // 1 = Licensed (認証済み)
+
+                // エディション名
+                var name = obj["Name"]?.ToString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    licenseInfo.Edition = name;
+                }
+
+                // プロダクトキーの一部（下5桁）
+                var partialProductKey = obj["PartialProductKey"]?.ToString();
+                if (!string.IsNullOrEmpty(partialProductKey))
+                {
+                    licenseInfo.PartialProductKey = partialProductKey;
+                }
+
+                // ライセンスファミリー
+                var licenseFamily = obj["LicenseFamily"]?.ToString();
+                if (!string.IsNullOrEmpty(licenseFamily))
+                {
+                    licenseInfo.LicenseFamily = licenseFamily;
+                }
+
+                // 猶予期間の残り時間（分単位）
+                var gracePeriodRemaining = obj["GracePeriodRemaining"];
+                if (gracePeriodRemaining != null)
+                {
+                    var minutes = Convert.ToInt32(gracePeriodRemaining);
+                    if (minutes > 0)
+                    {
+                        licenseInfo.GracePeriodRemainingMinutes = minutes;
+                    }
+                }
+
+                // 最初に見つかったアクティブなライセンスのみ使用
+                break;
+            }
+
+            // ライセンス情報が取得できなかった場合
+            if (string.IsNullOrEmpty(licenseInfo.Edition))
+            {
+                // Win32_OperatingSystem から基本的なOS情報を取得
+                using var osSearcher = new ManagementObjectSearcher("SELECT Caption, Version FROM Win32_OperatingSystem");
+                foreach (ManagementObject os in osSearcher.Get())
+                {
+                    licenseInfo.Edition = os["Caption"]?.ToString() ?? "不明";
+                    licenseInfo.Note = "ライセンス詳細情報の取得に失敗しました。基本情報のみ表示しています。";
+                    break;
+                }
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            licenseInfo.Error = "アクセス拒否";
+            licenseInfo.Note = "ライセンス情報の取得には管理者権限が必要な場合があります。";
+        }
+        catch (Exception ex)
+        {
+            licenseInfo.Error = $"取得失敗: {ex.Message}";
+            licenseInfo.Note = "Windowsライセンス情報の取得に失敗しました。";
+        }
+
+        return licenseInfo;
+    }
+
+    /// <summary>
+    /// ライセンスステータスコードから文字列を取得
+    /// </summary>
+    /// <param name="status">ライセンスステータスコード</param>
+    /// <returns>ステータス文字列</returns>
+    private string GetLicenseStatusString(int status)
+    {
+        return status switch
+        {
+            0 => "未認証 (Unlicensed)",
+            1 => "認証済み (Licensed)",
+            2 => "OOB猶予期間 (OOB Grace)",
+            3 => "OOT猶予期間 (OOT Grace)",
+            4 => "非正規猶予期間 (Non-Genuine Grace)",
+            5 => "通知モード (Notification)",
+            6 => "延長猶予期間 (Extended Grace)",
+            _ => $"不明 ({status})"
         };
     }
 }
