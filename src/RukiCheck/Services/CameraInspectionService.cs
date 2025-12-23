@@ -1,3 +1,4 @@
+using System.IO;
 using OpenCvSharp;
 using RukiCheck.Models;
 
@@ -102,7 +103,7 @@ public class CameraInspectionService : IInspectionService<CameraResult>
             result.File = $"attachments/{fileName}";
             result.DeviceName = "既定カメラ";
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             result.Captured = false;
             result.Error = "カメラアクセス権限エラー";

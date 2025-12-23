@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -308,9 +309,9 @@ public class MainViewModel : ViewModelBase
                 var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new MicrophoneResult { Recorded = false };
 
                 _session.Report.Microphone = result;
-                StatusMessage = $"マイク検査完了: {(result.Confirmed ? "正常" : "異常")}";
+                StatusMessage = $"マイク検査完了: {(result.UserConfirmed ? "正常" : "異常")}";
 
-                MessageBox.Show($"マイク検査完了\n録音: {(result.Recorded ? "成功" : "失敗")}\n確認: {(result.Confirmed ? "正常" : "異常")}",
+                MessageBox.Show($"マイク検査完了\n録音: {(result.Recorded ? "成功" : "失敗")}\n確認: {(result.UserConfirmed ? "正常" : "異常")}",
                     "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else

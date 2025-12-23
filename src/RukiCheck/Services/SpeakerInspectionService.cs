@@ -89,10 +89,10 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
         try
         {
             // デバイス名取得
-            var deviceCount = WaveOutEvent.DeviceCount;
+            var deviceCount = WaveOut.DeviceCount;
             if (deviceCount > 0)
             {
-                var capabilities = WaveOutEvent.GetCapabilities(0);
+                var capabilities = WaveOut.GetCapabilities(0);
                 result.DeviceName = capabilities.ProductName;
             }
         }
