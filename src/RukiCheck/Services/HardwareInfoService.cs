@@ -563,20 +563,36 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
                         storage.HealthStatus = "Unknown";
                     }
 
-                    // SMARTデータの簡易取得を試みる（WMI経由では制限あり）
-                    // 注：完全なSMART情報取得には専用ドライバやライブラリが必要
+                    // SMARTデータの取得を試みる
                     try
                     {
-                        var smartQuery = $"SELECT * FROM MSStorageDriver_FailurePredictStatus WHERE InstanceName LIKE '%{storage.Model}%'";
-                        using var smartSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartQuery);
+                        // まず障害予測ステータスをチェック
+                        var smartStatusQuery = $"SELECT * FROM MSStorageDriver_FailurePredictStatus WHERE InstanceName LIKE '%{storage.Model}%'";
+                        using var statusSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartStatusQuery);
 
-                        foreach (ManagementObject smart in smartSearcher.Get())
+                        foreach (ManagementObject statusObj in statusSearcher.Get())
                         {
-                            var predictFailure = Convert.ToBoolean(smart["PredictFailure"] ?? false);
+                            var predictFailure = Convert.ToBoolean(statusObj["PredictFailure"] ?? false);
                             if (predictFailure)
                             {
                                 storage.HealthStatus = "Critical";
                                 storage.CriticalWarning = "SMART障害予測が検出されました";
+                            }
+
+                            break;
+                        }
+
+                        // SMART属性データを取得
+                        var smartDataQuery = $"SELECT * FROM MSStorageDriver_FailurePredictData WHERE InstanceName LIKE '%{storage.Model}%'";
+                        using var dataSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartDataQuery);
+
+                        foreach (ManagementObject dataObj in dataSearcher.Get())
+                        {
+                            var vendorSpecific = dataObj["VendorSpecific"] as byte[];
+                            if (vendorSpecific != null && vendorSpecific.Length >= 362)
+                            {
+                                // SMART属性データをパース（12バイトずつ、30属性分）
+                                storage.SmartAttributes = ParseSmartAttributes(vendorSpecific);
                             }
 
                             break;
@@ -627,5 +643,161 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
         }
 
         return storageList;
+    }
+
+    /// <summary>
+    /// SMART VendorSpecific バイナリデータをパースしてSMART属性リストに変換
+    /// </summary>
+    /// <param name="vendorSpecific">VendorSpecific バイトデータ</param>
+    /// <returns>SMART属性リスト</returns>
+    private List<SmartAttribute> ParseSmartAttributes(byte[] vendorSpecific)
+    {
+        var attributes = new List<SmartAttribute>();
+
+        try
+        {
+            // VendorSpecific データは2バイトのヘッダー + 30属性（各12バイト）
+            // 各属性の構造:
+            // [0] ID
+            // [1-2] Flags
+            // [3] Current Value
+            // [4] Worst Value
+            // [5] Reserved
+            // [6-11] Raw Value (6 bytes, little-endian)
+
+            for (int i = 0; i < 30; i++)
+            {
+                int offset = 2 + (i * 12); // ヘッダー2バイト + 属性データ
+
+                if (offset + 12 > vendorSpecific.Length)
+                    break;
+
+                var id = vendorSpecific[offset];
+
+                // ID が 0 の場合は未使用エントリなのでスキップ
+                if (id == 0)
+                    continue;
+
+                var currentValue = vendorSpecific[offset + 3];
+                var worstValue = vendorSpecific[offset + 4];
+
+                // Raw Value を6バイトのリトルエンディアンで読み取り
+                long rawValue = 0;
+                for (int j = 0; j < 6; j++)
+                {
+                    rawValue |= ((long)vendorSpecific[offset + 5 + j]) << (j * 8);
+                }
+
+                var attribute = new SmartAttribute
+                {
+                    Id = id,
+                    Name = GetSmartAttributeName(id),
+                    CurrentValue = currentValue,
+                    WorstValue = worstValue,
+                    Threshold = 0, // WMI経由ではしきい値は取得できない
+                    RawValue = rawValue
+                };
+
+                attributes.Add(attribute);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SMART属性パースエラー: {ex.Message}");
+        }
+
+        return attributes;
+    }
+
+    /// <summary>
+    /// SMART属性IDから属性名を取得
+    /// </summary>
+    /// <param name="id">属性ID</param>
+    /// <returns>属性名</returns>
+    private string GetSmartAttributeName(int id)
+    {
+        return id switch
+        {
+            0x01 => "Read Error Rate",
+            0x02 => "Throughput Performance",
+            0x03 => "Spin-Up Time",
+            0x04 => "Start/Stop Count",
+            0x05 => "Reallocated Sectors Count",
+            0x06 => "Read Channel Margin",
+            0x07 => "Seek Error Rate",
+            0x08 => "Seek Time Performance",
+            0x09 => "Power-On Hours",
+            0x0A => "Spin Retry Count",
+            0x0B => "Recalibration Retries",
+            0x0C => "Power Cycle Count",
+            0x0D => "Soft Read Error Rate",
+            0xAA => "Available Reserved Space",
+            0xAB => "SSD Program Fail Count",
+            0xAC => "SSD Erase Fail Count",
+            0xAD => "SSD Wear Leveling Count",
+            0xAE => "Unexpected Power Loss Count",
+            0xAF => "Power Loss Protection Failure",
+            0xB0 => "Erase Fail Count",
+            0xB1 => "Wear Range Delta",
+            0xB3 => "Used Reserved Block Count",
+            0xB4 => "Unused Reserved Block Count",
+            0xB5 => "Program Fail Count Total",
+            0xB6 => "Erase Fail Count",
+            0xB7 => "SATA Downshift Error Count",
+            0xB8 => "End-to-End Error",
+            0xB9 => "Head Stability",
+            0xBA => "Induced Op-Vibration Detection",
+            0xBB => "Reported Uncorrectable Errors",
+            0xBC => "Command Timeout",
+            0xBD => "High Fly Writes",
+            0xBE => "Airflow Temperature",
+            0xBF => "G-Sense Error Rate",
+            0xC0 => "Power-Off Retract Count",
+            0xC1 => "Load/Unload Cycle Count",
+            0xC2 => "Temperature",
+            0xC3 => "Hardware ECC Recovered",
+            0xC4 => "Reallocation Event Count",
+            0xC5 => "Current Pending Sector Count",
+            0xC6 => "Uncorrectable Sector Count",
+            0xC7 => "UltraDMA CRC Error Count",
+            0xC8 => "Multi-Zone Error Rate",
+            0xC9 => "Soft Read Error Rate",
+            0xCA => "Data Address Mark Errors",
+            0xCB => "Run Out Cancel",
+            0xCC => "Soft ECC Correction",
+            0xCD => "Thermal Asperity Rate",
+            0xCE => "Flying Height",
+            0xCF => "Spin High Current",
+            0xD0 => "Spin Buzz",
+            0xD1 => "Offline Seek Performance",
+            0xD3 => "Vibration During Write",
+            0xD4 => "Shock During Write",
+            0xDC => "Disk Shift",
+            0xDD => "G-Sense Error Rate",
+            0xDE => "Loaded Hours",
+            0xDF => "Load/Unload Retry Count",
+            0xE0 => "Load Friction",
+            0xE1 => "Load/Unload Cycle Count",
+            0xE2 => "Load-in Time",
+            0xE3 => "Torque Amplification Count",
+            0xE4 => "Power-Off Retract Cycle",
+            0xE6 => "GMR Head Amplitude",
+            0xE7 => "Temperature",
+            0xE8 => "Endurance Remaining",
+            0xE9 => "Power-On Hours",
+            0xEA => "Average Erase Count",
+            0xEB => "Good Block Count",
+            0xF0 => "Head Flying Hours",
+            0xF1 => "Total LBAs Written",
+            0xF2 => "Total LBAs Read",
+            0xF3 => "Total LBAs Written Expanded",
+            0xF4 => "Total LBAs Read Expanded",
+            0xF9 => "NAND Writes (1GiB)",
+            0xFA => "Read Error Retry Rate",
+            0xFB => "Minimum Spares Remaining",
+            0xFC => "Newly Added Bad Flash Block",
+            0xFE => "Free Fall Protection",
+            _ => $"Unknown Attribute {id:X2}h"
+        };
     }
 }
