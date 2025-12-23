@@ -33,4 +33,10 @@ public class InspectionReport
 
     [JsonPropertyName("cpu")]
     public CpuResult? Cpu { get; set; }
+
+    [JsonPropertyName("wifi")]
+    public WiFiResult? WiFi { get; set; }
+
+    [JsonPropertyName("bluetooth")]
+    public BluetoothResult? Bluetooth { get; set; }
 }
