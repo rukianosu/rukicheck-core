@@ -12,15 +12,18 @@ public class InspectionOrchestrator
     private readonly FileSystemService _fileSystem;
     private readonly JsonReportWriter _jsonWriter;
     private readonly HtmlReportGenerator _htmlGenerator;
+    private readonly MarkdownReportGenerator _markdownGenerator;
 
     public InspectionOrchestrator(
         FileSystemService fileSystem,
         JsonReportWriter jsonWriter,
-        HtmlReportGenerator htmlGenerator)
+        HtmlReportGenerator htmlGenerator,
+        MarkdownReportGenerator markdownGenerator)
     {
         _fileSystem = fileSystem;
         _jsonWriter = jsonWriter;
         _htmlGenerator = htmlGenerator;
+        _markdownGenerator = markdownGenerator;
     }
 
     /// <summary>
@@ -50,7 +53,7 @@ public class InspectionOrchestrator
     }
 
     /// <summary>
-    /// レポートを保存（JSON + HTML）
+    /// レポートを保存（JSON + HTML + Markdown）
     /// </summary>
     public async Task SaveReportAsync(InspectionSession session)
     {
@@ -61,6 +64,10 @@ public class InspectionOrchestrator
         // HTML生成
         var htmlPath = Path.Combine(session.OutputPath, "report.html");
         await _htmlGenerator.GenerateAsync(htmlPath, session.Report);
+
+        // Markdown生成
+        var markdownPath = Path.Combine(session.OutputPath, "report.md");
+        await Task.Run(() => _markdownGenerator.Generate(session.Report, markdownPath));
     }
 
     /// <summary>

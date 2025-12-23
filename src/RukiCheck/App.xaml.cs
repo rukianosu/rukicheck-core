@@ -23,6 +23,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<FileSystemService>();
         services.AddSingleton<JsonReportWriter>();
         services.AddSingleton<HtmlReportGenerator>();
+        services.AddSingleton<MarkdownReportGenerator>();
 
         // Application
         services.AddSingleton<InspectionOrchestrator>();
