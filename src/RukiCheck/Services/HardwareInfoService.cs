@@ -1,3 +1,4 @@
+using System.IO;
 using System.Management;
 using RukiCheck.Models;
 
@@ -45,8 +46,8 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
             // ウイルス対策情報を収集（USB スキャン含む）
             // RukiCheckの実行ディレクトリをスキャン
-            var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var exeDirectory = Path.GetDirectoryName(exePath);
+            // シングルファイルアプリに対応するため AppContext.BaseDirectory を使用
+            var exeDirectory = AppContext.BaseDirectory;
             result.Antivirus = await _antivirusService.ScanAsync(exeDirectory);
         }
         catch (Exception ex)
