@@ -39,4 +39,7 @@ public class InspectionReport
 
     [JsonPropertyName("bluetooth")]
     public BluetoothResult? Bluetooth { get; set; }
+
+    [JsonPropertyName("cddvd")]
+    public CdDvdResult? CdDvd { get; set; }
 }

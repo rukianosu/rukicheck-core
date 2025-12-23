@@ -37,6 +37,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<CameraInspectionService>();
         services.AddTransient<TrackpadInspectionService>();
         services.AddTransient<CpuInspectionService>();
+        services.AddTransient<CdDvdInspectionService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
@@ -45,6 +46,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<MicrophoneTestViewModel>();
         services.AddTransient<SpeakerTestViewModel>();
         services.AddTransient<CameraTestViewModel>();
+        services.AddTransient<CdDvdTestViewModel>();
 
         _serviceProvider = services.BuildServiceProvider();
         ServiceProvider = _serviceProvider;

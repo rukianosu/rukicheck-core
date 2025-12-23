@@ -52,6 +52,7 @@ public class MainViewModel : ViewModelBase
         RunCameraTestCommand = new RelayCommand(_ => RunCameraTest());
         RunTrackpadTestCommand = new RelayCommand(_ => RunTrackpadTest());
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
+        RunCdDvdTestCommand = new RelayCommand(_ => RunCdDvdTest());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
         OpenReportFolderCommand = new RelayCommand(_ => OpenReportFolder());
     }
@@ -102,6 +103,7 @@ public class MainViewModel : ViewModelBase
     public RelayCommand RunCameraTestCommand { get; }
     public RelayCommand RunTrackpadTestCommand { get; }
     public AsyncRelayCommand RunCpuTestCommand { get; }
+    public RelayCommand RunCdDvdTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
     public RelayCommand OpenReportFolderCommand { get; }
 
@@ -516,6 +518,51 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"CPUテストに失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunCdDvdTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "CD/DVDドライブ検査を開始します...";
+
+            // DIからCdDvdTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(CdDvdTestViewModel)) as CdDvdTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("CD/DVDドライブ検査の初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // CD/DVDドライブ検査ウィンドウを表示
+            var window = new Views.CdDvdTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(CdDvdInspectionService)) as CdDvdInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new CdDvdResult();
+
+                _session.Report.CdDvd = result;
+                StatusMessage = $"CD/DVDドライブ検査完了: {(result.DriveFound ? "ドライブ検出" : "未検出")}";
+
+                MessageBox.Show($"CD/DVDドライブ検査完了\nドライブ: {(result.DriveFound ? "検出" : "未検出")}\n読み込み: {(result.ReadTestSuccess ? "成功" : "未実施/失敗")}",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "CD/DVDドライブ検査がキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"CD/DVDドライブ検査に失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
