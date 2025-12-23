@@ -29,6 +29,26 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
     }
 
     /// <summary>
+    /// 自動L/Rテスト（左→右の順で自動再生）
+    /// </summary>
+    public async Task PlayAutoTestAsync(Action<string>? onStatusChanged = null)
+    {
+        // 左チャンネル再生
+        onStatusChanged?.Invoke("🔊 左スピーカー (L) から音を再生しています... (2秒間)");
+        await PlayLeftChannelAsync();
+
+        // 待機
+        await Task.Delay(500);
+
+        // 右チャンネル再生
+        onStatusChanged?.Invoke("🔊 右スピーカー (R) から音を再生しています... (2秒間)");
+        await PlayRightChannelAsync();
+
+        // 完了
+        onStatusChanged?.Invoke("✅ 自動テスト完了！左右両方のスピーカーから音が聞こえましたか？");
+    }
+
+    /// <summary>
     /// テスト音を再生（ステレオバランス指定）
     /// </summary>
     private async Task PlayTestToneAsync(float leftVolume, float rightVolume)

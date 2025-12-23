@@ -38,12 +38,144 @@
         </Border>
 
         <!-- メインコンテンツ -->
-        <Grid Grid.Row="1" Margin="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20">
+            <StackPanel>
+                <!-- 自動テストセクション -->
+                <Border Background="White" CornerRadius="15" Padding="30" Margin="0,10"
+                        BorderBrush="#FF9800" BorderThickness="3">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="5" BlurRadius="15" Opacity="0.3"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="🎵 自動L/Rテスト（推奨）" FontSize="24" FontWeight="Bold"
+                                   Foreground="#FF9800" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                        <TextBlock Text="左(L) → 右(R) の順で自動的にテスト音を再生します" FontSize="14"
+                                   Foreground="#666" HorizontalAlignment="Center" Margin="0,0,0,20"
+                                   TextWrapping="Wrap"/>
+
+                        <!-- 自動テストボタン -->
+                        <Button Content="▶ 自動テスト開始" Command="{Binding StartAutoTestCommand}"
+                                Height="60" FontSize="18" FontWeight="Bold"
+                                Background="#FF9800" Foreground="White" BorderThickness="0"
+                                Cursor="Hand" Margin="0,0,0,20">
+                            <Button.Effect>
+                                <DropShadowEffect ShadowDepth="3" BlurRadius="10" Opacity="0.4"/>
+                            </Button.Effect>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="10" Padding="20">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#FB8C00"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#BDBDBD"/>
+                                            <Setter Property="Foreground" Value="#757575"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- 自動テスト後の確認ボタン -->
+                        <Border Visibility="{Binding AutoTestCompleted, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Background="#FFF3E0" CornerRadius="10" Padding="20" Margin="0,10,0,0">
+                            <StackPanel>
+                                <TextBlock Text="両方のスピーカーから音が聞こえましたか？" FontSize="16" FontWeight="Bold"
+                                           Foreground="#333" HorizontalAlignment="Center" Margin="0,0,0,15"
+                                           TextWrapping="Wrap"/>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Content="✅ はい（正常）" Command="{Binding ConfirmYesCommand}"
+                                            Width="180" Height="50" FontSize="15" FontWeight="Bold"
+                                            Background="#4CAF50" Foreground="White" BorderThickness="0"
+                                            Cursor="Hand" Margin="5">
+                                        <Button.Effect>
+                                            <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                                        </Button.Effect>
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="8" Padding="10">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#66BB6A"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Background" Value="#E0E0E0"/>
+                                                        <Setter Property="Foreground" Value="#9E9E9E"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <Button Content="❌ いいえ（異常）" Command="{Binding ConfirmNoCommand}"
+                                            Width="180" Height="50" FontSize="15" FontWeight="Bold"
+                                            Background="#F44336" Foreground="White" BorderThickness="0"
+                                            Cursor="Hand" Margin="5">
+                                        <Button.Effect>
+                                            <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4"/>
+                                        </Button.Effect>
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="8" Padding="10">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#E53935"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Background" Value="#E0E0E0"/>
+                                                        <Setter Property="Foreground" Value="#9E9E9E"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 区切り線 -->
+                <Border Height="2" Background="#E0E0E0" Margin="0,20"/>
+                <TextBlock Text="または個別にテストすることもできます" FontSize="14" Foreground="#999"
+                           HorizontalAlignment="Center" Margin="0,10,0,20" FontStyle="Italic"/>
+
+                <!-- 手動テストセクション -->
+                <Grid Margin="0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
             <!-- 左スピーカーテスト -->
             <Border Grid.Column="0" Background="White" CornerRadius="15" Padding="30"
@@ -334,7 +466,9 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-        </Grid>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- ステータスメッセージ -->
         <Border Grid.Row="2" Background="White" Padding="15" Margin="20,10" CornerRadius="10"

@@ -16,15 +16,20 @@ public class SpeakerTestViewModel : ViewModelBase
     private bool _rightTested = false;
     private bool _leftConfirmed = false;
     private bool _rightConfirmed = false;
-    private string _statusMessage = "左右のスピーカーをテストしてください";
+    private string _statusMessage = "「自動テスト」ボタンを押して左右のスピーカーをテストしてください";
+    private bool _isAutoTesting = false;
+    private bool _autoTestCompleted = false;
 
     public SpeakerTestViewModel(SpeakerInspectionService service)
     {
         _service = service;
 
         // コマンド
+        StartAutoTestCommand = new AsyncRelayCommand(async _ => await StartAutoTestAsync(), _ => !IsAutoTesting && !AutoTestCompleted);
         PlayLeftCommand = new AsyncRelayCommand(async _ => await PlayLeftAsync(), _ => !IsPlayingLeft && !LeftTested);
         PlayRightCommand = new AsyncRelayCommand(async _ => await PlayRightAsync(), _ => !IsPlayingRight && !RightTested);
+        ConfirmYesCommand = new RelayCommand(_ => ConfirmYes(), _ => AutoTestCompleted && !LeftTested && !RightTested);
+        ConfirmNoCommand = new RelayCommand(_ => ConfirmNo(), _ => AutoTestCompleted && !LeftTested && !RightTested);
         ConfirmLeftYesCommand = new RelayCommand(_ => ConfirmLeft(true), _ => !LeftTested);
         ConfirmLeftNoCommand = new RelayCommand(_ => ConfirmLeft(false), _ => !LeftTested);
         ConfirmRightYesCommand = new RelayCommand(_ => ConfirmRight(true), _ => !RightTested);
@@ -103,12 +108,39 @@ public class SpeakerTestViewModel : ViewModelBase
         set => SetProperty(ref _statusMessage, value);
     }
 
+    public bool IsAutoTesting
+    {
+        get => _isAutoTesting;
+        set
+        {
+            if (SetProperty(ref _isAutoTesting, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public bool AutoTestCompleted
+    {
+        get => _autoTestCompleted;
+        set
+        {
+            if (SetProperty(ref _autoTestCompleted, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
     #endregion
 
     #region Commands
 
+    public AsyncRelayCommand StartAutoTestCommand { get; }
     public AsyncRelayCommand PlayLeftCommand { get; }
     public AsyncRelayCommand PlayRightCommand { get; }
+    public RelayCommand ConfirmYesCommand { get; }
+    public RelayCommand ConfirmNoCommand { get; }
     public RelayCommand ConfirmLeftYesCommand { get; }
     public RelayCommand ConfirmLeftNoCommand { get; }
     public RelayCommand ConfirmRightYesCommand { get; }
@@ -121,6 +153,56 @@ public class SpeakerTestViewModel : ViewModelBase
     #endregion
 
     #region Methods
+
+    private async Task StartAutoTestAsync()
+    {
+        try
+        {
+            IsAutoTesting = true;
+            StatusMessage = "自動テストを開始します...";
+
+            await _service.PlayAutoTestAsync((status) =>
+            {
+                StatusMessage = status;
+            });
+
+            AutoTestCompleted = true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"エラー: {ex.Message}";
+        }
+        finally
+        {
+            IsAutoTesting = false;
+        }
+    }
+
+    private void ConfirmYes()
+    {
+        LeftConfirmed = true;
+        RightConfirmed = true;
+        LeftTested = true;
+        RightTested = true;
+        _service.SetLeftConfirmation(true);
+        _service.SetRightConfirmation(true);
+
+        StatusMessage = "✅ 両方のスピーカー: 正常 - 「完了」ボタンを押してください";
+        UpdateStatus();
+    }
+
+    private void ConfirmNo()
+    {
+        LeftConfirmed = false;
+        RightConfirmed = false;
+        LeftTested = true;
+        RightTested = true;
+        _service.SetLeftConfirmation(false);
+        _service.SetRightConfirmation(false);
+
+        StatusMessage = "❌ スピーカーに問題があります";
+        UpdateStatus();
+    }
 
     private async Task PlayLeftAsync()
     {
@@ -227,7 +309,9 @@ public class SpeakerTestViewModel : ViewModelBase
         RightTested = false;
         LeftConfirmed = false;
         RightConfirmed = false;
-        StatusMessage = "リセットしました。左右のスピーカーをテストしてください";
+        IsAutoTesting = false;
+        AutoTestCompleted = false;
+        StatusMessage = "リセットしました。「自動テスト」ボタンを押して左右のスピーカーをテストしてください";
     }
 
     #endregion
