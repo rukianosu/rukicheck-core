@@ -45,4 +45,7 @@ public class InspectionReport
 
     [JsonPropertyName("memory_test")]
     public MemoryTestResult? MemoryTest { get; set; }
+
+    [JsonPropertyName("touchscreen")]
+    public TouchScreenResult? TouchScreen { get; set; }
 }

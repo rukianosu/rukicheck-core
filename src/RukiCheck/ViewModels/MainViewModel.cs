@@ -54,6 +54,7 @@ public class MainViewModel : ViewModelBase
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
         RunCdDvdTestCommand = new RelayCommand(_ => RunCdDvdTest());
         RunMemoryTestCommand = new RelayCommand(_ => RunMemoryTest());
+        RunTouchScreenTestCommand = new RelayCommand(_ => RunTouchScreenTest());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
         OpenReportFolderCommand = new RelayCommand(_ => OpenReportFolder());
     }
@@ -106,6 +107,7 @@ public class MainViewModel : ViewModelBase
     public AsyncRelayCommand RunCpuTestCommand { get; }
     public RelayCommand RunCdDvdTestCommand { get; }
     public RelayCommand RunMemoryTestCommand { get; }
+    public RelayCommand RunTouchScreenTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
     public RelayCommand OpenReportFolderCommand { get; }
 
@@ -610,6 +612,62 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"メモリテストに失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunTouchScreenTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "タッチスクリーンテストを開始します...";
+
+            // DIからTouchScreenTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(TouchScreenTestViewModel)) as TouchScreenTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("タッチスクリーンテストの初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // タッチスクリーンテストウィンドウを表示
+            var window = new Views.TouchScreenTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(TouchScreenInspectionService)) as TouchScreenInspectionService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new TouchScreenResult();
+
+                _session.Report.TouchScreen = result;
+
+                if (!result.TouchAvailable)
+                {
+                    StatusMessage = "タッチスクリーン検査完了: タッチスクリーン非搭載";
+                    MessageBox.Show("タッチスクリーンが検出されませんでした。\nこのPCにはタッチパネル機能が搭載されていません。",
+                        "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    StatusMessage = $"タッチスクリーン検査完了: {result.Result}";
+                    string resultText = result.Result == "pass" ? "合格" :
+                                       result.Result == "warn" ? "一部不合格" : "不合格";
+                    MessageBox.Show($"タッチスクリーン検査完了\n結果: {resultText}\nタップ: {(result.TapDetected ? "検出" : "未検出")}\nスワイプ: {(result.SwipeDetected ? "検出" : "未検出")}\nマルチタッチ: {(result.MultiTouchSupported ? "対応" : "非対応")}\n最大タッチポイント: {result.MaxTouchPoints}点",
+                        "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            else
+            {
+                StatusMessage = "タッチスクリーンテストがキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"タッチスクリーンテストに失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
