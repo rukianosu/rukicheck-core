@@ -399,4 +399,144 @@ dotnet publish -c Release -r win-x64 \
 
 ---
 
+## 14. Wi-FiとBluetooth検査（部分実装）
+
+### 14.1 現在の実装状況
+
+**✅ 実装済み（2025年1月）**:
+- `WiFiResult` / `BluetoothResult` モデル
+- `WiFiInspectionService` / `BluetoothInspectionService` サービス
+- `InspectionReport` への統合
+
+**❌ 未実装（UIなし）**:
+- `WiFiTestViewModel` / `BluetoothTestViewModel`
+- `WiFiTestWindow.xaml` / `BluetoothTestWindow.xaml`
+- `InspectionOrchestrator` への統合
+
+### 14.2 実装されている機能
+
+**Wi-Fi検査サービス** (`WiFiInspectionService.cs`):
+```csharp
+// アダプター検出
+result.AdapterFound = true;
+result.AdapterName = "Intel(R) Wi-Fi 6 AX201";
+result.AdapterStatus = "有効";
+
+// ネットワークスキャン（簡易版）
+await ScanNetworksAsync();
+result.NetworksFound = 3;
+result.ScanSuccessful = true;
+```
+
+**Bluetooth検査サービス** (`BluetoothInspectionService.cs`):
+```csharp
+// アダプター検出
+result.AdapterFound = true;
+result.AdapterName = "Intel(R) Wireless Bluetooth(R)";
+result.IsEnabled = true;
+
+// デバイススキャン
+await ScanDevicesAsync();
+result.DevicesFound = 2;
+result.PairedDevices = [...];
+```
+
+### 14.3 技術的な制限
+
+**現在の実装方法**:
+- WMI (`Win32_NetworkAdapter`) 経由でアダプター情報取得
+- `System.Net.NetworkInformation` で基本的なネットワーク情報取得
+- WMI (`Win32_PnPEntity`) 経由でBluetoothデバイス情報取得
+
+**完全実装に必要なAPI**:
+| 機能 | 現在 | 完全実装に必要 |
+|------|------|---------------|
+| Wi-Fiアダプター検出 | ✅ WMI | - |
+| 利用可能なSSIDスキャン | ⚠️ 簡易版 | WLAN Native API (wlanapi.dll) |
+| 信号強度（RSSI）取得 | ⚠️ 仮の値 | WLAN Native API |
+| Bluetoothアダプター検出 | ✅ WMI | - |
+| ペアリング済みデバイス | ✅ WMI | - |
+| 近くのデバイススキャン | ⚠️ 簡易版 | Windows.Devices.Bluetooth API |
+
+### 14.4 将来のUI実装手順（必要になった場合）
+
+**1. ViewModelの作成**:
+```csharp
+// src/RukiCheck/ViewModels/WiFiTestViewModel.cs
+public class WiFiTestViewModel : ViewModelBase
+{
+    private readonly WiFiInspectionService _service;
+
+    public AsyncRelayCommand ScanNetworksCommand { get; }
+    public RelayCommand ConfirmYesCommand { get; }
+    public RelayCommand ConfirmNoCommand { get; }
+
+    private async Task ScanNetworksAsync()
+    {
+        StatusMessage = "Wi-Fiネットワークをスキャン中...";
+        var success = await _service.ScanNetworksAsync();
+        NetworksFound = _service.ScannedNetworks.Count;
+    }
+}
+```
+
+**2. XAMLウィンドウの作成**:
+```xml
+<!-- src/RukiCheck/Views/WiFiTestWindow.xaml -->
+<Window Title="Wi-Fi検査">
+    <StackPanel>
+        <TextBlock Text="{Binding StatusMessage}" />
+        <Button Content="ネットワークをスキャン" Command="{Binding ScanNetworksCommand}" />
+        <ListView ItemsSource="{Binding AvailableNetworks}">
+            <!-- SSID, 信号強度を表示 -->
+        </ListView>
+        <TextBlock Text="電波を受信できましたか？" />
+        <Button Content="はい" Command="{Binding ConfirmYesCommand}" />
+        <Button Content="いいえ" Command="{Binding ConfirmNoCommand}" />
+    </StackPanel>
+</Window>
+```
+
+**3. InspectionOrchestratorへの統合**:
+```csharp
+// MainViewModelで検査を追加
+if (wifiEnabled)
+{
+    var wifiWindow = new WiFiTestWindow(new WiFiTestViewModel(_wifiService));
+    wifiWindow.ShowDialog();
+    session.Report.WiFi = await _wifiService.ExecuteAsync(attachmentPath);
+}
+
+if (bluetoothEnabled)
+{
+    var btWindow = new BluetoothTestWindow(new BluetoothTestViewModel(_btService));
+    btWindow.ShowDialog();
+    session.Report.Bluetooth = await _btService.ExecuteAsync(attachmentPath);
+}
+```
+
+### 14.5 拡張実装の優先度
+
+**優先度：低**
+- 理由：Wi-Fi/Bluetoothは必須検査項目ではない
+- デバイスによっては搭載されていない（デスクトップPC等）
+- 現在のサービス実装で情報取得は可能
+
+**実装を検討すべきケース**:
+1. ノートPC専門の検品業務になった場合
+2. Wi-Fi/Bluetooth動作確認が必須要件になった場合
+3. ユーザーから要望があった場合
+
+### 14.6 参考資料
+
+**WLAN Native API**:
+- [WLAN API Documentation](https://docs.microsoft.com/en-us/windows/win32/api/_wlan/)
+- P/Invoke例: `WlanOpenHandle`, `WlanScan`, `WlanGetAvailableNetworkList`
+
+**Windows.Devices.Bluetooth API**:
+- [Bluetooth API Documentation](https://docs.microsoft.com/en-us/uwp/api/windows.devices.bluetooth)
+- 注意: UWP APIのためWPFからは `Microsoft.Windows.SDK.Contracts` NuGetパッケージ必要
+
+---
+
 **実装ガイドはここまで。実装頑張ってください！**
