@@ -29,6 +29,9 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
             // BitLocker情報を収集
             result.BitLocker = GetBitLockerInfo();
+
+            // ストレージヘルス情報を収集
+            result.StorageHealth = GetStorageHealthInfo();
         }
         catch (Exception ex)
         {
@@ -346,5 +349,225 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
         }
 
         return bitlockerInfo;
+    }
+
+    /// <summary>
+    /// ストレージヘルス情報を取得（SMART/NVMe）
+    /// </summary>
+    private List<StorageHealthInfo> GetStorageHealthInfo()
+    {
+        var storageList = new List<StorageHealthInfo>();
+
+        try
+        {
+            // Win32_DiskDrive から物理ドライブ情報を取得
+            using var diskDriveSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive");
+
+            int driveIndex = 0;
+            foreach (ManagementObject diskDrive in diskDriveSearcher.Get())
+            {
+                try
+                {
+                    var storage = new StorageHealthInfo();
+
+                    // 基本情報
+                    storage.DriveNumber = driveIndex++;
+                    storage.Model = diskDrive["Model"]?.ToString()?.Trim() ?? "不明";
+                    storage.SerialNumber = diskDrive["SerialNumber"]?.ToString()?.Trim() ?? "不明";
+
+                    // インターフェースタイプ
+                    var interfaceType = diskDrive["InterfaceType"]?.ToString() ?? "不明";
+                    storage.InterfaceType = interfaceType;
+
+                    // メディアタイプ
+                    var mediaType = diskDrive["MediaType"]?.ToString() ?? "";
+                    if (mediaType.Contains("SSD") || storage.Model.ToUpper().Contains("SSD"))
+                    {
+                        storage.MediaType = "SSD";
+                    }
+                    else if (mediaType.Contains("HDD") || mediaType.Contains("Fixed"))
+                    {
+                        storage.MediaType = "HDD";
+                    }
+                    else
+                    {
+                        storage.MediaType = "不明";
+                    }
+
+                    // 容量（バイト → GB）
+                    var sizeBytes = diskDrive["Size"];
+                    if (sizeBytes != null)
+                    {
+                        var size = Convert.ToUInt64(sizeBytes);
+                        storage.CapacityGb = Math.Round(size / 1024.0 / 1024.0 / 1024.0, 2);
+                    }
+
+                    // MSFT_PhysicalDisk から追加情報を取得（Windows 8以降）
+                    try
+                    {
+                        var scope = new ManagementScope(@"\\.\root\Microsoft\Windows\Storage");
+                        scope.Connect();
+
+                        // DeviceIDからドライブを特定
+                        var deviceId = diskDrive["DeviceID"]?.ToString();
+                        if (!string.IsNullOrEmpty(deviceId))
+                        {
+                            // DeviceID は "\\.\PHYSICALDRIVE0" の形式
+                            var driveNumberStr = deviceId.Replace(@"\\.\PHYSICALDRIVE", "");
+
+                            var physDiskQuery = new ObjectQuery($"SELECT * FROM MSFT_PhysicalDisk WHERE DeviceId = '{driveNumberStr}'");
+                            using var physDiskSearcher = new ManagementObjectSearcher(scope, physDiskQuery);
+
+                            foreach (ManagementObject physDisk in physDiskSearcher.Get())
+                            {
+                                // ヘルスステータス
+                                var healthStatus = Convert.ToInt32(physDisk["HealthStatus"] ?? 0);
+                                storage.HealthStatus = healthStatus switch
+                                {
+                                    0 => "OK",
+                                    1 => "Warning",
+                                    2 => "Critical",
+                                    _ => "Unknown"
+                                };
+
+                                // メディアタイプの再判定（より正確）
+                                var mediaTypeCode = Convert.ToInt32(physDisk["MediaType"] ?? 0);
+                                storage.MediaType = mediaTypeCode switch
+                                {
+                                    3 => "HDD",
+                                    4 => "SSD",
+                                    5 => "SCM",
+                                    _ => storage.MediaType
+                                };
+
+                                // 使用状況
+                                var usage = Convert.ToInt32(physDisk["Usage"] ?? 0);
+                                if (usage == 1)
+                                {
+                                    storage.Note = "自動選択プールのメンバー";
+                                }
+
+                                break; // 最初の一致で十分
+                            }
+
+                            // MSFT_StorageReliabilityCounter から詳細ヘルス情報を取得
+                            var reliabilityQuery = new ObjectQuery($"SELECT * FROM MSFT_StorageReliabilityCounter WHERE DeviceId = '{driveNumberStr}'");
+                            using var reliabilitySearcher = new ManagementObjectSearcher(scope, reliabilityQuery);
+
+                            foreach (ManagementObject reliability in reliabilitySearcher.Get())
+                            {
+                                // 温度
+                                var temperature = reliability["Temperature"];
+                                if (temperature != null && Convert.ToInt32(temperature) > 0)
+                                {
+                                    storage.TemperatureCelsius = Convert.ToInt32(temperature);
+                                }
+
+                                // 通電時間
+                                var powerOnHours = reliability["PowerOnHours"];
+                                if (powerOnHours != null)
+                                {
+                                    storage.PowerOnHours = Convert.ToInt64(powerOnHours);
+                                }
+
+                                // SSDの場合の残り寿命（Wear）
+                                var wear = reliability["Wear"];
+                                if (wear != null && Convert.ToInt32(wear) >= 0)
+                                {
+                                    var wearPercent = Convert.ToInt32(wear);
+                                    storage.RemainingLifePercent = 100 - wearPercent; // Wearは消耗率なので反転
+                                }
+
+                                // 総書き込み量（セクター数 × 512バイト → GB）
+                                var writeCommands = reliability["WriteCommandsCount"];
+                                if (writeCommands != null)
+                                {
+                                    var writeSectors = Convert.ToInt64(writeCommands);
+                                    storage.TotalBytesWrittenGb = Math.Round(writeSectors * 512.0 / 1024.0 / 1024.0 / 1024.0, 2);
+                                }
+
+                                // 総読み込み量（セクター数 × 512バイト → GB）
+                                var readCommands = reliability["ReadCommandsCount"];
+                                if (readCommands != null)
+                                {
+                                    var readSectors = Convert.ToInt64(readCommands);
+                                    storage.TotalBytesReadGb = Math.Round(readSectors * 512.0 / 1024.0 / 1024.0 / 1024.0, 2);
+                                }
+
+                                break; // 最初の一致で十分
+                            }
+                        }
+                    }
+                    catch (Exception msftEx)
+                    {
+                        // MSFT_PhysicalDisk へのアクセス失敗（古いWindowsやアクセス権限不足）
+                        storage.Note = $"詳細情報取得不可: {msftEx.Message}";
+                        storage.HealthStatus = "Unknown";
+                    }
+
+                    // SMARTデータの簡易取得を試みる（WMI経由では制限あり）
+                    // 注：完全なSMART情報取得には専用ドライバやライブラリが必要
+                    try
+                    {
+                        var smartQuery = $"SELECT * FROM MSStorageDriver_FailurePredictStatus WHERE InstanceName LIKE '%{storage.Model}%'";
+                        using var smartSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartQuery);
+
+                        foreach (ManagementObject smart in smartSearcher.Get())
+                        {
+                            var predictFailure = Convert.ToBoolean(smart["PredictFailure"] ?? false);
+                            if (predictFailure)
+                            {
+                                storage.HealthStatus = "Critical";
+                                storage.CriticalWarning = "SMART障害予測が検出されました";
+                            }
+
+                            break;
+                        }
+                    }
+                    catch
+                    {
+                        // SMART情報取得失敗は無視（多くのシステムで利用不可）
+                    }
+
+                    storageList.Add(storage);
+                }
+                catch (Exception driveEx)
+                {
+                    Console.WriteLine($"ドライブ情報取得エラー: {driveEx.Message}");
+
+                    // エラーでも最低限の情報は追加
+                    storageList.Add(new StorageHealthInfo
+                    {
+                        DriveNumber = driveIndex++,
+                        Model = "取得失敗",
+                        Error = driveEx.Message
+                    });
+                }
+            }
+
+            if (storageList.Count == 0)
+            {
+                storageList.Add(new StorageHealthInfo
+                {
+                    DriveNumber = 0,
+                    Model = "ストレージが検出されませんでした",
+                    Note = "物理ドライブ情報を取得できませんでした"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ストレージヘルス情報取得エラー: {ex.Message}");
+
+            storageList.Add(new StorageHealthInfo
+            {
+                DriveNumber = 0,
+                Model = "取得失敗",
+                Error = $"ストレージ情報の取得に失敗しました: {ex.Message}",
+                Note = "WMIアクセスに失敗しました。管理者権限が必要な場合があります。"
+            });
+        }
+
+        return storageList;
     }
 }

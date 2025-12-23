@@ -232,6 +232,103 @@ public class HtmlReportGenerator
             }
         }
 
+        // ストレージヘルス情報
+        if (hardware.StorageHealth.Count > 0)
+        {
+            sb.AppendLine("            <h3>💾 ストレージヘルス（SMART/NVMe）</h3>");
+
+            foreach (var storage in hardware.StorageHealth)
+            {
+                sb.AppendLine("            <table>");
+                sb.AppendLine($"                <tr><th>ドライブ番号</th><td><strong>#{storage.DriveNumber}</strong></td></tr>");
+                sb.AppendLine($"                <tr><th>モデル</th><td>{storage.Model}</td></tr>");
+
+                if (!string.IsNullOrEmpty(storage.Error))
+                {
+                    sb.AppendLine($"                <tr><th>エラー</th><td class=\"error\">❌ {storage.Error}</td></tr>");
+                    if (!string.IsNullOrEmpty(storage.Note))
+                    {
+                        sb.AppendLine($"                <tr><th>注記</th><td class=\"recommendation\">{storage.Note}</td></tr>");
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(storage.SerialNumber) && storage.SerialNumber != "不明")
+                    {
+                        sb.AppendLine($"                <tr><th>シリアル番号</th><td>{storage.SerialNumber}</td></tr>");
+                    }
+
+                    sb.AppendLine($"                <tr><th>インターフェース</th><td>{storage.InterfaceType}</td></tr>");
+                    sb.AppendLine($"                <tr><th>メディアタイプ</th><td>{storage.MediaType}</td></tr>");
+
+                    if (storage.CapacityGb > 0)
+                    {
+                        sb.AppendLine($"                <tr><th>容量</th><td>{storage.CapacityGb:F2} GB</td></tr>");
+                    }
+
+                    // ヘルスステータス
+                    var healthIcon = storage.HealthStatus switch
+                    {
+                        "OK" => "✅",
+                        "Warning" => "⚠️",
+                        "Critical" => "❌",
+                        _ => "❓"
+                    };
+
+                    var healthClass = storage.HealthStatus switch
+                    {
+                        "OK" => "status-ok",
+                        "Warning" => "status-warn",
+                        "Critical" => "error",
+                        _ => ""
+                    };
+
+                    sb.AppendLine($"                <tr><th>健康状態</th><td class=\"{healthClass}\">{healthIcon} {storage.HealthStatus}</td></tr>");
+
+                    if (storage.TemperatureCelsius.HasValue)
+                    {
+                        var tempClass = storage.TemperatureCelsius.Value > 60 ? "status-warn" : "";
+                        sb.AppendLine($"                <tr><th>温度</th><td class=\"{tempClass}\">{storage.TemperatureCelsius.Value}°C</td></tr>");
+                    }
+
+                    if (storage.PowerOnHours.HasValue)
+                    {
+                        var days = storage.PowerOnHours.Value / 24;
+                        sb.AppendLine($"                <tr><th>通電時間</th><td>{storage.PowerOnHours.Value:N0} 時間 ({days:N0} 日)</td></tr>");
+                    }
+
+                    if (storage.RemainingLifePercent.HasValue)
+                    {
+                        var lifeClass = storage.RemainingLifePercent.Value < 20 ? "error" :
+                                       storage.RemainingLifePercent.Value < 50 ? "status-warn" : "status-ok";
+                        sb.AppendLine($"                <tr><th>残り寿命（SSD）</th><td class=\"{lifeClass}\">{storage.RemainingLifePercent.Value}%</td></tr>");
+                    }
+
+                    if (storage.TotalBytesWrittenGb.HasValue && storage.TotalBytesWrittenGb.Value > 0)
+                    {
+                        sb.AppendLine($"                <tr><th>総書き込み量</th><td>{storage.TotalBytesWrittenGb.Value:N2} GB</td></tr>");
+                    }
+
+                    if (storage.TotalBytesReadGb.HasValue && storage.TotalBytesReadGb.Value > 0)
+                    {
+                        sb.AppendLine($"                <tr><th>総読み込み量</th><td>{storage.TotalBytesReadGb.Value:N2} GB</td></tr>");
+                    }
+
+                    if (!string.IsNullOrEmpty(storage.CriticalWarning))
+                    {
+                        sb.AppendLine($"                <tr><th>警告</th><td class=\"error\">⚠️ {storage.CriticalWarning}</td></tr>");
+                    }
+
+                    if (!string.IsNullOrEmpty(storage.Note) && string.IsNullOrEmpty(storage.Error))
+                    {
+                        sb.AppendLine($"                <tr><th>注記</th><td>{storage.Note}</td></tr>");
+                    }
+                }
+
+                sb.AppendLine("            </table>");
+            }
+        }
+
         sb.AppendLine("        </div>");
         return sb.ToString();
     }

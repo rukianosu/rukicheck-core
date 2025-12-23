@@ -30,6 +30,12 @@ public class HardwareInfoResult
     /// </summary>
     [JsonPropertyName("bitlocker")]
     public BitLockerInfo BitLocker { get; set; } = new();
+
+    /// <summary>
+    /// ストレージヘルス情報（SMART/NVMe）
+    /// </summary>
+    [JsonPropertyName("storage_health")]
+    public List<StorageHealthInfo> StorageHealth { get; set; } = new();
 }
 
 /// <summary>
@@ -240,4 +246,148 @@ public class BitLockerVolume
     /// </summary>
     [JsonPropertyName("error")]
     public string? Error { get; set; }
+}
+
+/// <summary>
+/// ストレージヘルス情報（SMART/NVMe）
+/// </summary>
+public class StorageHealthInfo
+{
+    /// <summary>
+    /// ドライブ番号（例: 0, 1, 2）
+    /// </summary>
+    [JsonPropertyName("drive_number")]
+    public int DriveNumber { get; set; }
+
+    /// <summary>
+    /// モデル名
+    /// </summary>
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = string.Empty;
+
+    /// <summary>
+    /// シリアル番号
+    /// </summary>
+    [JsonPropertyName("serial_number")]
+    public string SerialNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// インターフェースタイプ（SATA, NVMe, USB, など）
+    /// </summary>
+    [JsonPropertyName("interface_type")]
+    public string InterfaceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// メディアタイプ（SSD, HDD, など）
+    /// </summary>
+    [JsonPropertyName("media_type")]
+    public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 容量（GB）
+    /// </summary>
+    [JsonPropertyName("capacity_gb")]
+    public double CapacityGb { get; set; }
+
+    /// <summary>
+    /// 健康状態（OK, Warning, Critical, Unknown）
+    /// </summary>
+    [JsonPropertyName("health_status")]
+    public string HealthStatus { get; set; } = "Unknown";
+
+    /// <summary>
+    /// 温度（℃）
+    /// </summary>
+    [JsonPropertyName("temperature_celsius")]
+    public int? TemperatureCelsius { get; set; }
+
+    /// <summary>
+    /// 通電時間（時間）
+    /// </summary>
+    [JsonPropertyName("power_on_hours")]
+    public long? PowerOnHours { get; set; }
+
+    /// <summary>
+    /// 残り寿命（%）SSDの場合
+    /// </summary>
+    [JsonPropertyName("remaining_life_percent")]
+    public int? RemainingLifePercent { get; set; }
+
+    /// <summary>
+    /// 総書き込み量（GB）
+    /// </summary>
+    [JsonPropertyName("total_bytes_written_gb")]
+    public double? TotalBytesWrittenGb { get; set; }
+
+    /// <summary>
+    /// 総読み込み量（GB）
+    /// </summary>
+    [JsonPropertyName("total_bytes_read_gb")]
+    public double? TotalBytesReadGb { get; set; }
+
+    /// <summary>
+    /// Critical Warning（NVMeの場合）
+    /// </summary>
+    [JsonPropertyName("critical_warning")]
+    public string? CriticalWarning { get; set; }
+
+    /// <summary>
+    /// SMART属性リスト
+    /// </summary>
+    [JsonPropertyName("smart_attributes")]
+    public List<SmartAttribute> SmartAttributes { get; set; } = new();
+
+    /// <summary>
+    /// エラーメッセージ
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// 注記
+    /// </summary>
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// SMART属性
+/// </summary>
+public class SmartAttribute
+{
+    /// <summary>
+    /// 属性ID
+    /// </summary>
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    /// <summary>
+    /// 属性名
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 現在値
+    /// </summary>
+    [JsonPropertyName("current_value")]
+    public int CurrentValue { get; set; }
+
+    /// <summary>
+    /// 最悪値
+    /// </summary>
+    [JsonPropertyName("worst_value")]
+    public int WorstValue { get; set; }
+
+    /// <summary>
+    /// しきい値
+    /// </summary>
+    [JsonPropertyName("threshold")]
+    public int Threshold { get; set; }
+
+    /// <summary>
+    /// RAWデータ
+    /// </summary>
+    [JsonPropertyName("raw_value")]
+    public long RawValue { get; set; }
 }
