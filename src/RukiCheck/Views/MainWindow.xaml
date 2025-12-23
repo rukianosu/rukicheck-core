@@ -67,6 +67,23 @@
                         Width="200" Height="40" FontSize="16" FontWeight="Bold"
                         Background="#4CAF50" Foreground="White" Margin="0,15,0,0"
                         HorizontalAlignment="Center"/>
+
+                <Button Content="🔄 自動検査開始" Command="{Binding AutoInspectCommand}"
+                        Width="200" Height="40" FontSize="16" FontWeight="Bold"
+                        Background="#FF9800" Foreground="White" Margin="0,10,0,0"
+                        HorizontalAlignment="Center"
+                        ToolTip="全ての検査を順番に自動実行します">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Opacity" Value="1"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </GroupBox>
 

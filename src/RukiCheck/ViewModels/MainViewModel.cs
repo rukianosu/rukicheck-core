@@ -43,6 +43,7 @@ public class MainViewModel : ViewModelBase
         // コマンド初期化
         SelectSavePathCommand = new RelayCommand(_ => SelectSavePath());
         StartInspectionCommand = new RelayCommand(_ => StartInspection(), _ => CanStartInspection());
+        AutoInspectCommand = new AsyncRelayCommand(async _ => await AutoInspectAsync(), _ => IsInspectionStarted);
         RunStorageTestCommand = new AsyncRelayCommand(async _ => await RunStorageTestAsync());
         RunKeyboardTestCommand = new RelayCommand(_ => RunKeyboardTest());
         RunMicrophoneTestCommand = new RelayCommand(_ => RunMicrophoneTest());
@@ -92,6 +93,7 @@ public class MainViewModel : ViewModelBase
 
     public RelayCommand SelectSavePathCommand { get; }
     public RelayCommand StartInspectionCommand { get; }
+    public AsyncRelayCommand AutoInspectCommand { get; }
     public AsyncRelayCommand RunStorageTestCommand { get; }
     public RelayCommand RunKeyboardTestCommand { get; }
     public RelayCommand RunMicrophoneTestCommand { get; }
@@ -163,6 +165,63 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"検品の開始に失敗しました:\n{ex.Message}",
+                "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// 全検査を自動実行
+    /// </summary>
+    private async Task AutoInspectAsync()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "自動検査を開始します...";
+
+            // 1. ストレージ検査（自動）
+            StatusMessage = "1/7: ストレージ検査中...";
+            await RunStorageTestAsync();
+            await Task.Delay(500); // 短い待機時間
+
+            // 2. キーボード検査（ウィンドウ表示）
+            StatusMessage = "2/7: キーボード検査中...";
+            RunKeyboardTest();
+            await Task.Delay(500);
+
+            // 3. マイク検査（ウィンドウ表示）
+            StatusMessage = "3/7: マイク検査中...";
+            RunMicrophoneTest();
+            await Task.Delay(500);
+
+            // 4. スピーカー検査（ウィンドウ表示）
+            StatusMessage = "4/7: スピーカー検査中...";
+            RunSpeakerTest();
+            await Task.Delay(500);
+
+            // 5. カメラ検査（ウィンドウ表示）
+            StatusMessage = "5/7: カメラ検査中...";
+            RunCameraTest();
+            await Task.Delay(500);
+
+            // 6. トラックパッド検査（ウィンドウ表示）
+            StatusMessage = "6/7: トラックパッド検査中...";
+            RunTrackpadTest();
+            await Task.Delay(500);
+
+            // 7. CPU検査（自動）
+            StatusMessage = "7/7: CPU検査中...";
+            await RunCpuTestAsync();
+
+            StatusMessage = "✅ 全ての検査が完了しました！";
+            MessageBox.Show("全ての検査が完了しました。\n\n「レポート保存」ボタンを押して、検品レポートを保存してください。",
+                "自動検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"自動検査中にエラーが発生しました: {ex.Message}";
+            MessageBox.Show($"自動検査中にエラーが発生しました:\n{ex.Message}",
                 "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
