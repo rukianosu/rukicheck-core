@@ -104,7 +104,19 @@ public class MemoryInfo
     public int SpeedMhz { get; set; }
 
     /// <summary>
-    /// スロット数
+    /// 物理的な全メモリスロット数
+    /// </summary>
+    [JsonPropertyName("total_slots")]
+    public int TotalSlots { get; set; }
+
+    /// <summary>
+    /// 実装されているメモリモジュール数
+    /// </summary>
+    [JsonPropertyName("installed_modules")]
+    public int InstalledModules { get; set; }
+
+    /// <summary>
+    /// スロット数（後方互換性のため残す。InstalledModulesと同じ値）
     /// </summary>
     [JsonPropertyName("slots")]
     public int Slots { get; set; }

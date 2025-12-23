@@ -112,6 +112,26 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
         try
         {
+            // Win32_PhysicalMemoryArray から物理的な全スロット数を取得
+            try
+            {
+                using var arraySearcher = new ManagementObjectSearcher("SELECT MemoryDevices FROM Win32_PhysicalMemoryArray");
+                foreach (ManagementObject array in arraySearcher.Get())
+                {
+                    var memoryDevices = array["MemoryDevices"];
+                    if (memoryDevices != null)
+                    {
+                        memoryInfo.TotalSlots = Convert.ToInt32(memoryDevices);
+                        break; // 通常は1つのメモリアレイのみ
+                    }
+                }
+            }
+            catch (Exception slotEx)
+            {
+                Console.WriteLine($"全スロット数取得エラー: {slotEx.Message}");
+                memoryInfo.TotalSlots = 0; // 取得失敗時は0
+            }
+
             // Win32_PhysicalMemory から物理メモリ情報を取得
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PhysicalMemory");
             var modules = new List<MemoryModule>();
@@ -134,8 +154,15 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
             }
 
             memoryInfo.TotalGb = Math.Round(totalCapacity / 1024.0 / 1024.0 / 1024.0, 2);
-            memoryInfo.Slots = modules.Count;
+            memoryInfo.InstalledModules = modules.Count;
+            memoryInfo.Slots = modules.Count; // 後方互換性のため
             memoryInfo.Modules = modules;
+
+            // 全スロット数が取得できなかった場合は、実装数と同じにする
+            if (memoryInfo.TotalSlots == 0)
+            {
+                memoryInfo.TotalSlots = modules.Count;
+            }
 
             // 最初のモジュールから速度とタイプを取得
             if (modules.Count > 0)
