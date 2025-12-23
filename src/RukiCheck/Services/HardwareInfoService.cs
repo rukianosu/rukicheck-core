@@ -9,10 +9,17 @@ namespace RukiCheck.Services;
 /// </summary>
 public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 {
+    private readonly AntivirusScanService _antivirusService;
+
+    public HardwareInfoService(AntivirusScanService antivirusService)
+    {
+        _antivirusService = antivirusService;
+    }
+
     /// <summary>
     /// ハードウェア情報を収集
     /// </summary>
-    public Task<HardwareInfoResult> ExecuteAsync(string attachmentPath)
+    public async Task<HardwareInfoResult> ExecuteAsync(string attachmentPath)
     {
         var result = new HardwareInfoResult();
 
@@ -35,6 +42,12 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
             // ストレージヘルス情報を収集
             result.StorageHealth = GetStorageHealthInfo();
+
+            // ウイルス対策情報を収集（USB スキャン含む）
+            // RukiCheckの実行ディレクトリをスキャン
+            var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var exeDirectory = Path.GetDirectoryName(exePath);
+            result.Antivirus = await _antivirusService.ScanAsync(exeDirectory);
         }
         catch (Exception ex)
         {
@@ -42,7 +55,7 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
             Console.WriteLine($"ハードウェア情報収集エラー: {ex.Message}");
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
     /// <summary>

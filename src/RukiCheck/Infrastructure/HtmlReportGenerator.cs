@@ -393,6 +393,120 @@ public class HtmlReportGenerator
             }
         }
 
+        // ウイルス対策情報
+        sb.AppendLine("            <h3>🛡️ ウイルス対策情報</h3>");
+
+        if (!string.IsNullOrEmpty(hardware.Antivirus.Error))
+        {
+            sb.AppendLine("            <table>");
+            sb.AppendLine($"                <tr><th>エラー</th><td class=\"error\">❌ {hardware.Antivirus.Error}</td></tr>");
+            if (!string.IsNullOrEmpty(hardware.Antivirus.Note))
+            {
+                sb.AppendLine($"                <tr><th>注記</th><td>{hardware.Antivirus.Note}</td></tr>");
+            }
+            sb.AppendLine("            </table>");
+        }
+        else
+        {
+            // Windows Defender情報
+            sb.AppendLine("            <h4>Windows Defender</h4>");
+            sb.AppendLine("            <table>");
+
+            var defenderIcon = hardware.Antivirus.WindowsDefender.Enabled ? "✅" : "❌";
+            var defenderClass = hardware.Antivirus.WindowsDefender.Enabled ? "status-ok" : "error";
+            sb.AppendLine($"                <tr><th>状態</th><td class=\"{defenderClass}\">{defenderIcon} {(hardware.Antivirus.WindowsDefender.Enabled ? "有効" : "無効")}</td></tr>");
+
+            if (hardware.Antivirus.WindowsDefender.Enabled)
+            {
+                var rtpIcon = hardware.Antivirus.WindowsDefender.RealtimeProtectionEnabled ? "✅" : "⚠️";
+                var rtpClass = hardware.Antivirus.WindowsDefender.RealtimeProtectionEnabled ? "status-ok" : "status-warn";
+                sb.AppendLine($"                <tr><th>リアルタイム保護</th><td class=\"{rtpClass}\">{rtpIcon} {(hardware.Antivirus.WindowsDefender.RealtimeProtectionEnabled ? "オン" : "オフ")}</td></tr>");
+
+                if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.SignatureLastUpdated))
+                {
+                    var sigIcon = hardware.Antivirus.WindowsDefender.SignatureUpToDate ? "✅" : "⚠️";
+                    var sigClass = hardware.Antivirus.WindowsDefender.SignatureUpToDate ? "status-ok" : "status-warn";
+                    sb.AppendLine($"                <tr><th>定義ファイル更新日</th><td class=\"{sigClass}\">{sigIcon} {hardware.Antivirus.WindowsDefender.SignatureLastUpdated}</td></tr>");
+                }
+
+                if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.LastScanDateTime))
+                {
+                    sb.AppendLine($"                <tr><th>最終スキャン</th><td>{hardware.Antivirus.WindowsDefender.LastScanDateTime}</td></tr>");
+                }
+
+                sb.AppendLine($"                <tr><th>最近の脅威検出</th><td>{hardware.Antivirus.WindowsDefender.RecentThreatsCount} 件</td></tr>");
+            }
+
+            if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.Error))
+            {
+                sb.AppendLine($"                <tr><th>エラー</th><td class=\"error\">⚠️ {hardware.Antivirus.WindowsDefender.Error}</td></tr>");
+            }
+
+            sb.AppendLine("            </table>");
+
+            // USBスキャン結果
+            if (hardware.Antivirus.UsbScan.Scanned)
+            {
+                sb.AppendLine("            <h4>USBドライブスキャン結果</h4>");
+                sb.AppendLine("            <table>");
+                sb.AppendLine($"                <tr><th>スキャン対象</th><td>{hardware.Antivirus.UsbScan.ScanPath}</td></tr>");
+
+                var resultIcon = hardware.Antivirus.UsbScan.Result switch
+                {
+                    "Clean" => "✅",
+                    "Threat" => "🚨",
+                    _ => "❌"
+                };
+
+                var resultClass = hardware.Antivirus.UsbScan.Result switch
+                {
+                    "Clean" => "status-ok",
+                    "Threat" => "error",
+                    _ => "status-warn"
+                };
+
+                var resultText = hardware.Antivirus.UsbScan.Result switch
+                {
+                    "Clean" => "安全（脅威なし）",
+                    "Threat" => "⚠️ 脅威検出！",
+                    _ => "エラー"
+                };
+
+                sb.AppendLine($"                <tr><th>スキャン結果</th><td class=\"{resultClass}\"><strong>{resultIcon} {resultText}</strong></td></tr>");
+
+                if (hardware.Antivirus.UsbScan.ThreatsFound > 0)
+                {
+                    sb.AppendLine($"                <tr><th>検出された脅威</th><td class=\"error\"><strong>{hardware.Antivirus.UsbScan.ThreatsFound} 件</strong></td></tr>");
+
+                    if (hardware.Antivirus.UsbScan.ThreatNames.Count > 0)
+                    {
+                        sb.AppendLine("                <tr><th>脅威名</th><td class=\"error\">");
+                        sb.AppendLine("                    <ul>");
+                        foreach (var threat in hardware.Antivirus.UsbScan.ThreatNames)
+                        {
+                            sb.AppendLine($"                        <li>{threat}</li>");
+                        }
+                        sb.AppendLine("                    </ul>");
+                        sb.AppendLine("                </td></tr>");
+                    }
+                }
+
+                sb.AppendLine($"                <tr><th>スキャン時間</th><td>{hardware.Antivirus.UsbScan.ScanDurationSeconds:F2} 秒</td></tr>");
+
+                if (!string.IsNullOrEmpty(hardware.Antivirus.UsbScan.Warning))
+                {
+                    sb.AppendLine($"                <tr><th>警告</th><td class=\"error\"><strong>{hardware.Antivirus.UsbScan.Warning}</strong></td></tr>");
+                }
+
+                if (!string.IsNullOrEmpty(hardware.Antivirus.UsbScan.Error))
+                {
+                    sb.AppendLine($"                <tr><th>エラー</th><td class=\"status-warn\">⚠️ {hardware.Antivirus.UsbScan.Error}</td></tr>");
+                }
+
+                sb.AppendLine("            </table>");
+            }
+        }
+
         sb.AppendLine("        </div>");
         return sb.ToString();
     }

@@ -42,6 +42,12 @@ public class HardwareInfoResult
     /// </summary>
     [JsonPropertyName("storage_health")]
     public List<StorageHealthInfo> StorageHealth { get; set; } = new();
+
+    /// <summary>
+    /// ウイルス対策情報（Windows Defender、USBスキャン結果）
+    /// </summary>
+    [JsonPropertyName("antivirus")]
+    public AntivirusInfo Antivirus { get; set; } = new();
 }
 
 /// <summary>
@@ -426,4 +432,136 @@ public class SmartAttribute
     /// </summary>
     [JsonPropertyName("raw_value")]
     public long RawValue { get; set; }
+}
+
+/// <summary>
+/// ウイルス対策情報
+/// </summary>
+public class AntivirusInfo
+{
+    /// <summary>
+    /// Windows Defender情報
+    /// </summary>
+    [JsonPropertyName("windows_defender")]
+    public WindowsDefenderInfo WindowsDefender { get; set; } = new();
+
+    /// <summary>
+    /// USBドライブスキャン結果
+    /// </summary>
+    [JsonPropertyName("usb_scan")]
+    public UsbScanResult UsbScan { get; set; } = new();
+
+    /// <summary>
+    /// エラーメッセージ
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// 注記
+    /// </summary>
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// Windows Defender情報
+/// </summary>
+public class WindowsDefenderInfo
+{
+    /// <summary>
+    /// Windows Defenderが有効か
+    /// </summary>
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// リアルタイム保護が有効か
+    /// </summary>
+    [JsonPropertyName("realtime_protection_enabled")]
+    public bool RealtimeProtectionEnabled { get; set; }
+
+    /// <summary>
+    /// 定義ファイルの最終更新日時
+    /// </summary>
+    [JsonPropertyName("signature_last_updated")]
+    public string SignatureLastUpdated { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 最終スキャン日時
+    /// </summary>
+    [JsonPropertyName("last_scan_datetime")]
+    public string LastScanDateTime { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 最近検出された脅威の数
+    /// </summary>
+    [JsonPropertyName("recent_threats_count")]
+    public int RecentThreatsCount { get; set; }
+
+    /// <summary>
+    /// 定義ファイルが最新かどうか（7日以内の更新）
+    /// </summary>
+    [JsonPropertyName("signature_up_to_date")]
+    public bool SignatureUpToDate { get; set; }
+
+    /// <summary>
+    /// エラーメッセージ
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+}
+
+/// <summary>
+/// USBドライブスキャン結果
+/// </summary>
+public class UsbScanResult
+{
+    /// <summary>
+    /// スキャンを実行したか
+    /// </summary>
+    [JsonPropertyName("scanned")]
+    public bool Scanned { get; set; }
+
+    /// <summary>
+    /// スキャン対象パス
+    /// </summary>
+    [JsonPropertyName("scan_path")]
+    public string ScanPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// スキャン結果（Clean/Threat/Error）
+    /// </summary>
+    [JsonPropertyName("result")]
+    public string Result { get; set; } = "Unknown";
+
+    /// <summary>
+    /// 検出された脅威の数
+    /// </summary>
+    [JsonPropertyName("threats_found")]
+    public int ThreatsFound { get; set; }
+
+    /// <summary>
+    /// 検出された脅威のリスト
+    /// </summary>
+    [JsonPropertyName("threat_names")]
+    public List<string> ThreatNames { get; set; } = new();
+
+    /// <summary>
+    /// スキャンにかかった時間（秒）
+    /// </summary>
+    [JsonPropertyName("scan_duration_seconds")]
+    public double ScanDurationSeconds { get; set; }
+
+    /// <summary>
+    /// エラーメッセージ
+    /// </summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// 警告メッセージ
+    /// </summary>
+    [JsonPropertyName("warning")]
+    public string? Warning { get; set; }
 }

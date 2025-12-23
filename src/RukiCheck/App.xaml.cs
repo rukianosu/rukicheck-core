@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<InspectionOrchestrator>();
 
         // Services（各検査サービス）
+        services.AddTransient<AntivirusScanService>();
         services.AddTransient<HardwareInfoService>();
         services.AddTransient<StorageInspectionService>();
         services.AddTransient<KeyboardInspectionService>();

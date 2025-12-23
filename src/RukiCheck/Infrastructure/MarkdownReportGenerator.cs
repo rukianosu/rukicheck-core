@@ -314,6 +314,95 @@ public class MarkdownReportGenerator
             }
         }
 
+        // ウイルス対策情報
+        sb.AppendLine("### 🛡️ ウイルス対策情報");
+        sb.AppendLine();
+
+        // Windows Defender情報
+        sb.AppendLine("#### Windows Defender");
+        sb.AppendLine();
+
+        if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.Error))
+        {
+            sb.AppendLine($"⚠️ **エラー**: {hardware.Antivirus.WindowsDefender.Error}");
+        }
+        else
+        {
+            var enabledIcon = hardware.Antivirus.WindowsDefender.Enabled ? "✅" : "❌";
+            sb.AppendLine($"- **状態**: {enabledIcon} {(hardware.Antivirus.WindowsDefender.Enabled ? "有効" : "無効")}");
+
+            var rtProtectionIcon = hardware.Antivirus.WindowsDefender.RealtimeProtectionEnabled ? "✅" : "❌";
+            sb.AppendLine($"- **リアルタイム保護**: {rtProtectionIcon} {(hardware.Antivirus.WindowsDefender.RealtimeProtectionEnabled ? "オン" : "オフ")}");
+
+            if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.SignatureLastUpdated))
+            {
+                var signatureIcon = hardware.Antivirus.WindowsDefender.SignatureUpToDate ? "✅" : "⚠️";
+                var signatureStatus = hardware.Antivirus.WindowsDefender.SignatureUpToDate ? "最新" : "古い（7日以上前）";
+                sb.AppendLine($"- **定義ファイル**: {signatureIcon} {hardware.Antivirus.WindowsDefender.SignatureLastUpdated} ({signatureStatus})");
+            }
+
+            if (!string.IsNullOrEmpty(hardware.Antivirus.WindowsDefender.LastScanDateTime))
+            {
+                sb.AppendLine($"- **最終スキャン**: {hardware.Antivirus.WindowsDefender.LastScanDateTime}");
+            }
+
+            sb.AppendLine($"- **最近の脅威検出数**: {hardware.Antivirus.WindowsDefender.RecentThreatsCount} 件");
+        }
+        sb.AppendLine();
+
+        // USBスキャン結果
+        if (hardware.Antivirus.UsbScan.Scanned)
+        {
+            sb.AppendLine("#### USBドライブスキャン結果");
+            sb.AppendLine();
+            sb.AppendLine($"- **スキャン対象**: `{hardware.Antivirus.UsbScan.ScanPath}`");
+
+            var resultIcon = hardware.Antivirus.UsbScan.Result switch
+            {
+                "Clean" => "✅",
+                "Threat" => "❌",
+                "Error" => "⚠️",
+                _ => "❓"
+            };
+            sb.AppendLine($"- **スキャン結果**: {resultIcon} **{hardware.Antivirus.UsbScan.Result}**");
+
+            if (hardware.Antivirus.UsbScan.ThreatsFound > 0)
+            {
+                sb.AppendLine($"- **検出された脅威**: {hardware.Antivirus.UsbScan.ThreatsFound} 件");
+                if (hardware.Antivirus.UsbScan.ThreatNames.Count > 0)
+                {
+                    sb.AppendLine("- **脅威の詳細**:");
+                    foreach (var threat in hardware.Antivirus.UsbScan.ThreatNames)
+                    {
+                        sb.AppendLine($"  - ⚠️ {threat}");
+                    }
+                }
+            }
+
+            sb.AppendLine($"- **スキャン時間**: {hardware.Antivirus.UsbScan.ScanDurationSeconds:F1} 秒");
+
+            if (!string.IsNullOrEmpty(hardware.Antivirus.UsbScan.Error))
+            {
+                sb.AppendLine($"- **エラー**: {hardware.Antivirus.UsbScan.Error}");
+            }
+
+            if (!string.IsNullOrEmpty(hardware.Antivirus.UsbScan.Warning))
+            {
+                sb.AppendLine();
+                sb.AppendLine($"> ⚠️ **警告**: {hardware.Antivirus.UsbScan.Warning}");
+            }
+            sb.AppendLine();
+        }
+        else if (!string.IsNullOrEmpty(hardware.Antivirus.Error))
+        {
+            sb.AppendLine($"⚠️ **エラー**: {hardware.Antivirus.Error}");
+            if (!string.IsNullOrEmpty(hardware.Antivirus.Note))
+            {
+                sb.AppendLine($"- **注記**: {hardware.Antivirus.Note}");
+            }
+            sb.AppendLine();
+        }
+
         return sb.ToString();
     }
 
