@@ -8,6 +8,12 @@ namespace RukiCheck.Models;
 public class HardwareInfoResult
 {
     /// <summary>
+    /// システム情報（メーカー、型番、シリアルナンバー）
+    /// </summary>
+    [JsonPropertyName("system")]
+    public SystemInfo System { get; set; } = new();
+
+    /// <summary>
     /// メモリ情報
     /// </summary>
     [JsonPropertyName("memory")]
@@ -36,6 +42,36 @@ public class HardwareInfoResult
     /// </summary>
     [JsonPropertyName("storage_health")]
     public List<StorageHealthInfo> StorageHealth { get; set; } = new();
+}
+
+/// <summary>
+/// システム情報
+/// </summary>
+public class SystemInfo
+{
+    /// <summary>
+    /// メーカー名（例: Dell Inc., HP, Lenovo）
+    /// </summary>
+    [JsonPropertyName("manufacturer")]
+    public string Manufacturer { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 型番・モデル名（例: Latitude 7490, ThinkPad X1 Carbon）
+    /// </summary>
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = string.Empty;
+
+    /// <summary>
+    /// シリアルナンバー
+    /// </summary>
+    [JsonPropertyName("serial_number")]
+    public string SerialNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// BIOSバージョン
+    /// </summary>
+    [JsonPropertyName("bios_version")]
+    public string BiosVersion { get; set; } = string.Empty;
 }
 
 /// <summary>

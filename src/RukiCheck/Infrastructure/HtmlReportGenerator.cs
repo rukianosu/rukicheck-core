@@ -113,6 +113,15 @@ public class HtmlReportGenerator
         sb.AppendLine("        <div class=\"section\">");
         sb.AppendLine("            <h2>🖥️ ハードウェア情報</h2>");
 
+        // システム情報（メーカー、型番、シリアルナンバー）
+        sb.AppendLine("            <h3>🏷️ システム情報</h3>");
+        sb.AppendLine("            <table>");
+        sb.AppendLine($"                <tr><th>メーカー</th><td><strong>{hardware.System.Manufacturer}</strong></td></tr>");
+        sb.AppendLine($"                <tr><th>型番</th><td><strong>{hardware.System.Model}</strong></td></tr>");
+        sb.AppendLine($"                <tr><th>シリアルナンバー</th><td><strong>{hardware.System.SerialNumber}</strong></td></tr>");
+        sb.AppendLine($"                <tr><th>BIOSバージョン</th><td>{hardware.System.BiosVersion}</td></tr>");
+        sb.AppendLine("            </table>");
+
         // CPU情報
         sb.AppendLine("            <h3>💻 CPU</h3>");
         sb.AppendLine("            <table>");

@@ -18,6 +18,9 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
         try
         {
+            // システム情報を収集（メーカー、型番、シリアルナンバー）
+            result.System = GetSystemInfo();
+
             // メモリ情報を収集
             result.Memory = GetMemoryInfo();
 
@@ -40,6 +43,61 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
         }
 
         return Task.FromResult(result);
+    }
+
+    /// <summary>
+    /// システム情報を取得（メーカー、型番、シリアルナンバー）
+    /// </summary>
+    private SystemInfo GetSystemInfo()
+    {
+        var systemInfo = new SystemInfo();
+
+        try
+        {
+            // Win32_ComputerSystem からメーカーと型番を取得
+            using var searcher = new ManagementObjectSearcher("SELECT Manufacturer, Model FROM Win32_ComputerSystem");
+
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                systemInfo.Manufacturer = obj["Manufacturer"]?.ToString()?.Trim() ?? "不明";
+                systemInfo.Model = obj["Model"]?.ToString()?.Trim() ?? "不明";
+                break; // 最初の結果のみ使用
+            }
+
+            // Win32_BIOS からシリアルナンバーとBIOSバージョンを取得
+            using var biosSearcher = new ManagementObjectSearcher("SELECT SerialNumber, SMBIOSBIOSVersion FROM Win32_BIOS");
+
+            foreach (ManagementObject bios in biosSearcher.Get())
+            {
+                var serialNumber = bios["SerialNumber"]?.ToString()?.Trim() ?? "";
+
+                // シリアルナンバーが取得できない場合やデフォルト値の場合
+                if (string.IsNullOrEmpty(serialNumber) ||
+                    serialNumber.Equals("To Be Filled By O.E.M.", StringComparison.OrdinalIgnoreCase) ||
+                    serialNumber.Equals("Default string", StringComparison.OrdinalIgnoreCase) ||
+                    serialNumber.Equals("System Serial Number", StringComparison.OrdinalIgnoreCase))
+                {
+                    systemInfo.SerialNumber = "取得不可";
+                }
+                else
+                {
+                    systemInfo.SerialNumber = serialNumber;
+                }
+
+                systemInfo.BiosVersion = bios["SMBIOSBIOSVersion"]?.ToString()?.Trim() ?? "不明";
+                break; // 最初の結果のみ使用
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"システム情報取得エラー: {ex.Message}");
+            systemInfo.Manufacturer = "取得失敗";
+            systemInfo.Model = "取得失敗";
+            systemInfo.SerialNumber = "取得失敗";
+            systemInfo.BiosVersion = "取得失敗";
+        }
+
+        return systemInfo;
     }
 
     /// <summary>
