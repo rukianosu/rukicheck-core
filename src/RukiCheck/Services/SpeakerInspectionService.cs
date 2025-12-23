@@ -36,21 +36,48 @@ public class SpeakerInspectionService : IInspectionService<SpeakerResult>
         const int frequency = 440; // A4 (ラ音)
         const int durationMs = 2000; // 2秒
 
+        using var outputDevice = new WaveOutEvent();
+
+        // デバイスの対応チャンネル数を確認
+        var deviceCapabilities = WaveOut.GetCapabilities(0);
+        var deviceChannels = deviceCapabilities.Channels;
+
+        // モノラル音源を生成
         var sineWave = new SignalGenerator
         {
             Gain = 0.2,
             Frequency = frequency,
             Type = SignalGeneratorType.Sin
-        }.Take(TimeSpan.FromMilliseconds(durationMs));
-
-        // ステレオパンニング
-        var stereo = new PanningSampleProvider(sineWave)
-        {
-            Pan = leftVolume > rightVolume ? -1.0f : 1.0f
         };
 
-        using var outputDevice = new WaveOutEvent();
-        outputDevice.Init(stereo);
+        // WaveFormatを明示的にモノラルに設定
+        sineWave.SetWaveFormat(44100, 1); // サンプルレート44100Hz, モノラル(1チャンネル)
+
+        var signal = sineWave.Take(TimeSpan.FromMilliseconds(durationMs));
+
+        ISampleProvider audioSource;
+
+        // デバイスがステレオ対応の場合、ステレオに変換してパンニング
+        if (deviceChannels >= 2)
+        {
+            // モノラルをステレオに変換
+            var stereoSignal = new MonoToStereoSampleProvider(signal);
+
+            // ステレオパンニング
+            var panned = new PanningSampleProvider(stereoSignal)
+            {
+                Pan = leftVolume > rightVolume ? -1.0f : 1.0f
+            };
+
+            audioSource = panned;
+        }
+        else
+        {
+            // モノラルデバイスの場合はそのまま使用
+            audioSource = signal;
+        }
+
+        outputDevice.Init(audioSource);
         outputDevice.Play();
 
         while (outputDevice.PlaybackState == PlaybackState.Playing)
