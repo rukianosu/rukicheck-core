@@ -552,6 +552,63 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
                                     storage.TotalBytesReadGb = Math.Round(readSectors * 512.0 / 1024.0 / 1024.0 / 1024.0, 2);
                                 }
 
+                                // 読み取りエラー数（NVMeの場合は Media Errors に相当）
+                                var readErrorsTotal = reliability["ReadErrorsTotal"];
+                                if (readErrorsTotal != null)
+                                {
+                                    var readErrors = Convert.ToInt64(readErrorsTotal);
+                                    if (readErrors > 0)
+                                    {
+                                        storage.SmartAttributes.Add(new SmartAttribute
+                                        {
+                                            Id = 1000, // カスタムID（WMI由来）
+                                            Name = "Read Errors Total",
+                                            RawValue = readErrors,
+                                            CurrentValue = 100,
+                                            WorstValue = 100
+                                        });
+                                    }
+                                }
+
+                                // 書き込みエラー数
+                                var writeErrorsTotal = reliability["WriteErrorsTotal"];
+                                if (writeErrorsTotal != null)
+                                {
+                                    var writeErrors = Convert.ToInt64(writeErrorsTotal);
+                                    if (writeErrors > 0)
+                                    {
+                                        storage.SmartAttributes.Add(new SmartAttribute
+                                        {
+                                            Id = 1001, // カスタムID（WMI由来）
+                                            Name = "Write Errors Total",
+                                            RawValue = writeErrors,
+                                            CurrentValue = 100,
+                                            WorstValue = 100
+                                        });
+                                    }
+                                }
+
+                                // NVMeドライブの場合の追加チェック
+                                if (interfaceType.Contains("NVMe", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // Critical Warning の検出
+                                    var readErrorsCount = Convert.ToInt64(readErrorsTotal ?? 0);
+                                    var writeErrorsCount = Convert.ToInt64(writeErrorsTotal ?? 0);
+
+                                    if (readErrorsCount > 100 || writeErrorsCount > 100)
+                                    {
+                                        storage.CriticalWarning = $"高いエラー率が検出されました（Read: {readErrorsCount}, Write: {writeErrorsCount}）";
+                                    }
+
+                                    // 残り寿命が低い場合の警告
+                                    if (storage.RemainingLifePercent.HasValue && storage.RemainingLifePercent.Value < 10)
+                                    {
+                                        storage.CriticalWarning = string.IsNullOrEmpty(storage.CriticalWarning)
+                                            ? $"SSD残り寿命が低下しています（{storage.RemainingLifePercent}%）"
+                                            : $"{storage.CriticalWarning}; SSD残り寿命が低下しています（{storage.RemainingLifePercent}%）";
+                                    }
+                                }
+
                                 break; // 最初の一致で十分
                             }
                         }
@@ -563,14 +620,14 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
                         storage.HealthStatus = "Unknown";
                     }
 
-                    // SMARTデータの簡易取得を試みる（WMI経由では制限あり）
-                    // 注：完全なSMART情報取得には専用ドライバやライブラリが必要
+                    // SMARTデータの詳細取得を試みる（WMI経由）
                     try
                     {
-                        var smartQuery = $"SELECT * FROM MSStorageDriver_FailurePredictStatus WHERE InstanceName LIKE '%{storage.Model}%'";
-                        using var smartSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartQuery);
+                        // SMART障害予測ステータスを取得
+                        var smartStatusQuery = $"SELECT * FROM MSStorageDriver_FailurePredictStatus WHERE InstanceName LIKE '%{storage.Model}%'";
+                        using var smartStatusSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartStatusQuery);
 
-                        foreach (ManagementObject smart in smartSearcher.Get())
+                        foreach (ManagementObject smart in smartStatusSearcher.Get())
                         {
                             var predictFailure = Convert.ToBoolean(smart["PredictFailure"] ?? false);
                             if (predictFailure)
@@ -581,10 +638,33 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
 
                             break;
                         }
+
+                        // SMART属性データを取得
+                        var smartDataQuery = $"SELECT * FROM MSStorageDriver_FailurePredictData WHERE InstanceName LIKE '%{storage.Model}%'";
+                        using var smartDataSearcher = new ManagementObjectSearcher(@"\\.\root\wmi", smartDataQuery);
+
+                        foreach (ManagementObject smartData in smartDataSearcher.Get())
+                        {
+                            try
+                            {
+                                var vendorSpecific = smartData["VendorSpecific"] as byte[];
+                                if (vendorSpecific != null && vendorSpecific.Length >= 362)
+                                {
+                                    storage.SmartAttributes = ParseSmartAttributes(vendorSpecific);
+                                }
+                            }
+                            catch (Exception parseEx)
+                            {
+                                Console.WriteLine($"SMART属性パースエラー: {parseEx.Message}");
+                            }
+
+                            break;
+                        }
                     }
-                    catch
+                    catch (Exception smartEx)
                     {
                         // SMART情報取得失敗は無視（多くのシステムで利用不可）
+                        Console.WriteLine($"SMART情報取得エラー: {smartEx.Message}");
                     }
 
                     storageList.Add(storage);
@@ -627,5 +707,154 @@ public class HardwareInfoService : IInspectionService<HardwareInfoResult>
         }
 
         return storageList;
+    }
+
+    /// <summary>
+    /// SMART属性をパースする
+    /// VendorSpecificバイト配列からSMART属性情報を抽出
+    /// </summary>
+    private List<SmartAttribute> ParseSmartAttributes(byte[] vendorSpecific)
+    {
+        var attributes = new List<SmartAttribute>();
+
+        try
+        {
+            // VendorSpecificは362バイト以上必要
+            if (vendorSpecific.Length < 362)
+            {
+                return attributes;
+            }
+
+            // 最初の2バイトはヘッダー、その後30個の属性（各12バイト）
+            for (int i = 0; i < 30; i++)
+            {
+                int offset = 2 + (i * 12);
+
+                // 属性ID（0は未使用）
+                byte id = vendorSpecific[offset];
+                if (id == 0)
+                {
+                    continue; // 未使用エントリはスキップ
+                }
+
+                // フラグ（オフセット1-2）
+                // ushort flags = BitConverter.ToUInt16(vendorSpecific, offset + 1);
+
+                // Current Value（オフセット3）
+                byte currentValue = vendorSpecific[offset + 3];
+
+                // Worst Value（オフセット4）
+                byte worstValue = vendorSpecific[offset + 4];
+
+                // RAW値（オフセット5-10の6バイト、リトルエンディアン）
+                long rawValue = 0;
+                for (int j = 0; j < 6; j++)
+                {
+                    rawValue |= ((long)vendorSpecific[offset + 5 + j]) << (j * 8);
+                }
+
+                // 属性名を取得
+                string attributeName = GetSmartAttributeName(id);
+
+                var attribute = new SmartAttribute
+                {
+                    Id = id,
+                    Name = attributeName,
+                    CurrentValue = currentValue,
+                    WorstValue = worstValue,
+                    Threshold = 0, // WMI経由ではしきい値は取得困難
+                    RawValue = rawValue
+                };
+
+                attributes.Add(attribute);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SMART属性パースエラー: {ex.Message}");
+        }
+
+        return attributes;
+    }
+
+    /// <summary>
+    /// SMART属性IDから属性名を取得
+    /// </summary>
+    private string GetSmartAttributeName(int id)
+    {
+        return id switch
+        {
+            1 => "Read Error Rate",
+            2 => "Throughput Performance",
+            3 => "Spin-Up Time",
+            4 => "Start/Stop Count",
+            5 => "Reallocated Sectors Count",
+            6 => "Read Channel Margin",
+            7 => "Seek Error Rate",
+            8 => "Seek Time Performance",
+            9 => "Power-On Hours",
+            10 => "Spin Retry Count",
+            11 => "Calibration Retry Count",
+            12 => "Power Cycle Count",
+            13 => "Soft Read Error Rate",
+            170 => "Available Reserved Space",
+            171 => "SSD Program Fail Count",
+            172 => "SSD Erase Fail Count",
+            173 => "SSD Wear Leveling Count",
+            174 => "Unexpected Power Loss Count",
+            175 => "Power Loss Protection Failure",
+            176 => "Erase Fail Count",
+            177 => "Wear Range Delta",
+            179 => "Used Reserved Block Count Total",
+            180 => "Unused Reserved Block Count Total",
+            181 => "Program Fail Count Total",
+            182 => "Erase Fail Count",
+            183 => "Runtime Bad Block",
+            184 => "End-to-End Error",
+            187 => "Reported Uncorrectable Errors",
+            188 => "Command Timeout",
+            189 => "High Fly Writes",
+            190 => "Airflow Temperature",
+            191 => "G-Sense Error Rate",
+            192 => "Power-Off Retract Count",
+            193 => "Load Cycle Count",
+            194 => "Temperature",
+            195 => "Hardware ECC Recovered",
+            196 => "Reallocation Event Count",
+            197 => "Current Pending Sector Count",
+            198 => "Offline Uncorrectable Sector Count",
+            199 => "UltraDMA CRC Error Count",
+            200 => "Multi-Zone Error Rate",
+            201 => "Soft Read Error Rate",
+            202 => "Data Address Mark Error",
+            203 => "Run Out Cancel",
+            204 => "Soft ECC Correction",
+            205 => "Thermal Asperity Rate",
+            206 => "Flying Height",
+            207 => "Spin High Current",
+            208 => "Spin Buzz",
+            209 => "Offline Seek Performance",
+            220 => "Disk Shift",
+            221 => "G-Sense Error Rate",
+            222 => "Loaded Hours",
+            223 => "Load/Unload Retry Count",
+            224 => "Load Friction",
+            225 => "Load/Unload Cycle Count",
+            226 => "Load-In Time",
+            227 => "Torque Amplification Count",
+            228 => "Power-Off Retract Cycle",
+            230 => "GMR Head Amplitude",
+            231 => "SSD Life Left",
+            232 => "Available Reserved Space",
+            233 => "Media Wearout Indicator",
+            234 => "Average Erase Count",
+            235 => "Good Block Count",
+            240 => "Head Flying Hours",
+            241 => "Total LBAs Written",
+            242 => "Total LBAs Read",
+            250 => "Read Error Retry Rate",
+            254 => "Free Fall Protection",
+            _ => $"Unknown Attribute {id}"
+        };
     }
 }

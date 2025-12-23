@@ -333,6 +333,60 @@ public class HtmlReportGenerator
                     {
                         sb.AppendLine($"                <tr><th>注記</th><td>{storage.Note}</td></tr>");
                     }
+
+                    // SMART属性（重要なもののみ表示）
+                    if (storage.SmartAttributes.Count > 0)
+                    {
+                        sb.AppendLine("            </table>");
+                        sb.AppendLine("            <h4>📊 SMART属性</h4>");
+                        sb.AppendLine("            <table>");
+                        sb.AppendLine("                <tr>");
+                        sb.AppendLine("                    <th>ID</th>");
+                        sb.AppendLine("                    <th>属性名</th>");
+                        sb.AppendLine("                    <th>現在値</th>");
+                        sb.AppendLine("                    <th>最悪値</th>");
+                        sb.AppendLine("                    <th>RAW値</th>");
+                        sb.AppendLine("                </tr>");
+
+                        // 重要なSMART属性のみ表示（ID: 5, 9, 10, 187, 197, 198, 199, 1000, 1001）
+                        var importantIds = new[] { 5, 9, 10, 12, 187, 197, 198, 199, 1000, 1001 };
+                        var importantAttributes = storage.SmartAttributes
+                            .Where(a => importantIds.Contains(a.Id))
+                            .OrderBy(a => a.Id);
+
+                        foreach (var attr in importantAttributes)
+                        {
+                            // 異常値の検出（ID 5, 197, 198 のRAW値が0より大きい場合は警告）
+                            var rowClass = "";
+                            if ((attr.Id == 5 || attr.Id == 197 || attr.Id == 198) && attr.RawValue > 0)
+                            {
+                                rowClass = " class=\"error\"";
+                            }
+                            else if (attr.Id == 1000 || attr.Id == 1001) // Read/Write Errors
+                            {
+                                rowClass = " class=\"status-warn\"";
+                            }
+
+                            sb.AppendLine($"                <tr{rowClass}>");
+                            sb.AppendLine($"                    <td>{attr.Id}</td>");
+                            sb.AppendLine($"                    <td>{attr.Name}</td>");
+                            sb.AppendLine($"                    <td>{attr.CurrentValue}</td>");
+                            sb.AppendLine($"                    <td>{attr.WorstValue}</td>");
+                            sb.AppendLine($"                    <td>{attr.RawValue:N0}</td>");
+                            sb.AppendLine("                </tr>");
+                        }
+
+                        sb.AppendLine("            </table>");
+
+                        // 残りの属性数を表示
+                        var otherCount = storage.SmartAttributes.Count - importantAttributes.Count();
+                        if (otherCount > 0)
+                        {
+                            sb.AppendLine($"            <p style=\"font-size: 12px; color: #666; margin-left: 20px;\">※ その他の属性 {otherCount} 個は JSON レポートに記録されています</p>");
+                        }
+
+                        sb.AppendLine("            <table style=\"margin-top: 0;\">");
+                    }
                 }
 
                 sb.AppendLine("            </table>");

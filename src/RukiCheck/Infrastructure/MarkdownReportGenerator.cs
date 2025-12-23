@@ -267,6 +267,48 @@ public class MarkdownReportGenerator
                     {
                         sb.AppendLine($"- **警告**: ⚠️ {storage.CriticalWarning}");
                     }
+
+                    // SMART属性（重要なもののみ表示）
+                    if (storage.SmartAttributes.Count > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine("**📊 SMART属性（重要項目）**");
+                        sb.AppendLine();
+
+                        // 重要なSMART属性のみ表示
+                        var importantIds = new[] { 5, 9, 10, 12, 187, 197, 198, 199, 1000, 1001 };
+                        var importantAttributes = storage.SmartAttributes
+                            .Where(a => importantIds.Contains(a.Id))
+                            .OrderBy(a => a.Id)
+                            .ToList();
+
+                        if (importantAttributes.Count > 0)
+                        {
+                            sb.AppendLine("| ID | 属性名 | 現在値 | 最悪値 | RAW値 |");
+                            sb.AppendLine("|---|---|---|---|---|");
+
+                            foreach (var attr in importantAttributes)
+                            {
+                                // 異常値の場合は警告アイコンを追加
+                                var warningIcon = "";
+                                if ((attr.Id == 5 || attr.Id == 197 || attr.Id == 198) && attr.RawValue > 0)
+                                {
+                                    warningIcon = " ⚠️";
+                                }
+
+                                sb.AppendLine($"| {attr.Id} | {attr.Name}{warningIcon} | {attr.CurrentValue} | {attr.WorstValue} | {attr.RawValue:N0} |");
+                            }
+
+                            sb.AppendLine();
+
+                            // 残りの属性数を表示
+                            var otherCount = storage.SmartAttributes.Count - importantAttributes.Count;
+                            if (otherCount > 0)
+                            {
+                                sb.AppendLine($"> ℹ️ その他の属性 {otherCount} 個は JSON レポートに記録されています");
+                            }
+                        }
+                    }
                 }
                 sb.AppendLine();
             }
