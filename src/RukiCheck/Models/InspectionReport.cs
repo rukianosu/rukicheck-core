@@ -42,4 +42,7 @@ public class InspectionReport
 
     [JsonPropertyName("cddvd")]
     public CdDvdResult? CdDvd { get; set; }
+
+    [JsonPropertyName("memory_test")]
+    public MemoryTestResult? MemoryTest { get; set; }
 }

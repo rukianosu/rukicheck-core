@@ -53,6 +53,7 @@ public class MainViewModel : ViewModelBase
         RunTrackpadTestCommand = new RelayCommand(_ => RunTrackpadTest());
         RunCpuTestCommand = new AsyncRelayCommand(async _ => await RunCpuTestAsync());
         RunCdDvdTestCommand = new RelayCommand(_ => RunCdDvdTest());
+        RunMemoryTestCommand = new RelayCommand(_ => RunMemoryTest());
         SaveReportCommand = new AsyncRelayCommand(async _ => await SaveReportAsync());
         OpenReportFolderCommand = new RelayCommand(_ => OpenReportFolder());
     }
@@ -104,6 +105,7 @@ public class MainViewModel : ViewModelBase
     public RelayCommand RunTrackpadTestCommand { get; }
     public AsyncRelayCommand RunCpuTestCommand { get; }
     public RelayCommand RunCdDvdTestCommand { get; }
+    public RelayCommand RunMemoryTestCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
     public RelayCommand OpenReportFolderCommand { get; }
 
@@ -563,6 +565,51 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             MessageBox.Show($"CD/DVDドライブ検査に失敗:\n{ex.Message}", "エラー",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RunMemoryTest()
+    {
+        if (_session == null) return;
+
+        try
+        {
+            StatusMessage = "メモリテストを開始します...";
+
+            // DIからMemoryTestViewModelを取得
+            var viewModel = App.ServiceProvider?.GetService(typeof(MemoryTestViewModel)) as MemoryTestViewModel;
+            if (viewModel == null)
+            {
+                MessageBox.Show("メモリテストの初期化に失敗しました", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // メモリテストウィンドウを表示
+            var window = new Views.MemoryTestWindow(viewModel);
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                // 検査完了：結果をセッションに保存
+                var service = App.ServiceProvider?.GetService(typeof(MemoryTestService)) as MemoryTestService;
+                var result = service?.ExecuteAsync(_session.AttachmentsPath).Result ?? new MemoryTestResult();
+
+                _session.Report.MemoryTest = result;
+                StatusMessage = $"メモリテスト完了: {(result.AllPatternsPassed ? "全パターン合格" : "一部不合格")}";
+
+                MessageBox.Show($"メモリテスト完了\nテストサイズ: {result.TestedMb} MB\nパターンテスト: {(result.AllPatternsPassed ? "合格" : "不合格")}\n書き込み速度: {result.WriteSpeedMbps:F0} MB/s\n読み込み速度: {result.ReadSpeedMbps:F0} MB/s",
+                    "検査完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "メモリテストがキャンセルされました";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"メモリテストに失敗:\n{ex.Message}", "エラー",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

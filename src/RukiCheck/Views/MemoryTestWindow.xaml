@@ -1,0 +1,312 @@
+<Window x:Class="RukiCheck.Views.MemoryTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="🧠 メモリテスト" Height="650" Width="700"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FA">
+
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#F5F7FA" Offset="0"/>
+                <GradientStop Color="#E8EAF6" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ヘッダー -->
+        <Border Grid.Row="0" Background="#673AB7" Padding="20" Margin="20,20,20,10" CornerRadius="10">
+            <StackPanel>
+                <TextBlock Text="🧠 メモリテスト" FontSize="28" FontWeight="Bold"
+                           Foreground="White" HorizontalAlignment="Center"/>
+                <TextBlock Text="RAMの読み書きテストとパターン検証" FontSize="14"
+                           Foreground="White" Opacity="0.9" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- メインコンテンツ -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20,10">
+            <StackPanel>
+                <!-- メモリ情報 -->
+                <Border Background="White" CornerRadius="10" Padding="20" Margin="0,10"
+                        BorderBrush="#E0E0E0" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="💾 システムメモリ情報" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock FontSize="13" Margin="0,3">
+                            <Run Text="総メモリ: " FontWeight="Bold"/>
+                            <Run Text="{Binding TotalGb, StringFormat={}{0:F1} GB}"/>
+                        </TextBlock>
+                        <TextBlock FontSize="13" Margin="0,3">
+                            <Run Text="利用可能: " FontWeight="Bold"/>
+                            <Run Text="{Binding AvailableMb, StringFormat={}{0:N0} MB}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- テスト設定 -->
+                <Border Background="White" CornerRadius="10" Padding="20" Margin="0,10"
+                        BorderBrush="#E0E0E0" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="⚙️ テスト設定" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="テストサイズ（推奨: 512MB - 1024MB）" FontSize="12" Foreground="#666" Margin="0,0,0,5"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Text="テストサイズ:" VerticalAlignment="Center" Width="100"/>
+                            <TextBox Text="{Binding TestSizeMb, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="100" Height="30" VerticalContentAlignment="Center"
+                                     IsEnabled="{Binding IsTesting, Converter={StaticResource InverseBoolConverter}}"/>
+                            <TextBlock Text=" MB" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        </StackPanel>
+
+                        <TextBlock Text="※ 利用可能メモリの50%以下に自動調整されます"
+                                   FontSize="11" Foreground="#999" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- テスト実行 -->
+                <Border Background="White" CornerRadius="10" Padding="25" Margin="0,10"
+                        BorderBrush="#E0E0E0" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="🧪 メモリテスト実行" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                        <Button Content="▶ テスト開始" Command="{Binding StartTestCommand}"
+                                Height="50" FontSize="16" FontWeight="Bold"
+                                Background="#673AB7" Foreground="White" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="8" Padding="15">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#7E57C2"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#BDBDBD"/>
+                                            <Setter Property="Foreground" Value="#757575"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- プログレスバー -->
+                        <ProgressBar Height="25" Value="{Binding TestProgress}" Maximum="100"
+                                     Margin="0,15,0,0" Foreground="#673AB7" Background="#EEEEEE"/>
+                        <TextBlock Text="{Binding TestProgress, StringFormat={}{0}%}"
+                                   HorizontalAlignment="Center" FontSize="13" FontWeight="Bold"
+                                   Foreground="#673AB7" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- テスト結果 -->
+                <Border Background="White" CornerRadius="10" Padding="20" Margin="0,10"
+                        BorderBrush="#E0E0E0" BorderThickness="1"
+                        Visibility="{Binding TestCompleted, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="📊 テスト結果" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <Border Background="{Binding TestPassed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#E8F5E9|#FFEBEE}"
+                                CornerRadius="5" Padding="15" Margin="0,5">
+                            <StackPanel>
+                                <TextBlock FontSize="14" FontWeight="Bold" Margin="0,2">
+                                    <Run Text="判定: "/>
+                                    <Run Text="{Binding TestPassed, Converter={StaticResource BoolToTextConverter}, ConverterParameter=✅ 合格|❌ 不合格}"
+                                         Foreground="{Binding TestPassed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#4CAF50|#F44336}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="テストサイズ: "/>
+                                    <Run Text="{Binding TestSizeMb, StringFormat={}{0:N0} MB}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="パターンテスト: "/>
+                                    <Run Text="{Binding PatternsTested}"/>
+                                    <Run Text="個"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="失敗: "/>
+                                    <Run Text="{Binding FailedPatterns}"/>
+                                    <Run Text="個"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="書き込み速度: "/>
+                                    <Run Text="{Binding WriteSpeed, StringFormat={}{0:F0} MB/s}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="読み込み速度: "/>
+                                    <Run Text="{Binding ReadSpeed, StringFormat={}{0:F0} MB/s}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="13" Margin="0,2">
+                                    <Run Text="実行時間: "/>
+                                    <Run Text="{Binding TestDuration, StringFormat={}{0:F1}秒}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 確認セクション -->
+                <Border Background="White" CornerRadius="10" Padding="25" Margin="0,10"
+                        BorderBrush="#E0E0E0" BorderThickness="1"
+                        Visibility="{Binding TestCompleted, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="✅ テスト中にフリーズや異常はありませんでしたか？"
+                                   FontSize="18" FontWeight="Bold" Margin="0,0,0,15" TextWrapping="Wrap"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="✅ はい（正常）" Command="{Binding ConfirmYesCommand}"
+                                    Width="220" Height="50" FontSize="14" FontWeight="Bold"
+                                    Background="#4CAF50" Foreground="White" BorderThickness="0" Margin="5">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="8" Padding="15">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#66BB6A"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Background" Value="#BDBDBD"/>
+                                                <Setter Property="Foreground" Value="#757575"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
+                            <Button Content="❌ いいえ（異常あり）" Command="{Binding ConfirmNoCommand}"
+                                    Width="220" Height="50" FontSize="14" FontWeight="Bold"
+                                    Background="#FF5722" Foreground="White" BorderThickness="0" Margin="5">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="8" Padding="15">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#F4511E"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Background" Value="#BDBDBD"/>
+                                                <Setter Property="Foreground" Value="#757575"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ステータス -->
+        <Border Grid.Row="2" Background="White" Padding="15" Margin="20,10" CornerRadius="10"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="14" FontWeight="Bold"
+                       Foreground="#673AB7" HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="20">
+            <Button Content="🔄 リセット" Command="{Binding ResetCommand}"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#9E9E9E" Foreground="White" BorderThickness="0" Margin="5">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="✔ 完了" Click="CompleteButton_Click"
+                    Width="150" Height="45" FontSize="16" FontWeight="Bold"
+                    Background="#4CAF50" Foreground="White" BorderThickness="0" Margin="5"
+                    IsEnabled="{Binding UserConfirmed, Converter={StaticResource NotNullToBoolConverter}}">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="8" Padding="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#66BB6A"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
